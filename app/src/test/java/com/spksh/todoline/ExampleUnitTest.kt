@@ -14,4 +14,10 @@ class ExampleUnitTest {
     fun addition_isCorrect() {
         assertEquals(4, 2 + 2)
     }
+    @Test
+    fun test() {
+        //val model = MainViewModel()
+        ///model.deleteTodo(0)
+        //model.getTodo(0)
+    }
 }
