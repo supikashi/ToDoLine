@@ -20,7 +20,10 @@ class App : Application() {
             applicationContext,
             TaskDatabase::class.java,
             "task_database"
-        ).addMigrations(MIGRATION_2_3).build()
+        ).addMigrations(MIGRATION_2_3)
+            .addMigrations(MIGRATION_3_4)
+            //.addMigrations(MIGRATION_4_5)
+            .build()
 
         repository = TaskRepository(database.taskDao())
     }
@@ -29,5 +32,11 @@ class App : Application() {
 val MIGRATION_2_3 = object : Migration(2, 3) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE task_table ADD COLUMN description TEXT NOT NULL DEFAULT ''")
+    }
+}
+
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE task_table ADD COLUMN deadline INTEGER")
     }
 }
