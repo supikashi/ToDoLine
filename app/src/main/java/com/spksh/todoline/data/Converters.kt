@@ -5,12 +5,12 @@ import java.time.Instant
 
 class Converters {
     @TypeConverter
-    fun fromInstant(value: Instant?): Long? {
-        return value?.toEpochMilli()
+    fun fromList(list: List<Int>): String {
+        return list.joinToString(",")
     }
 
     @TypeConverter
-    fun toInstant(value: Long?): Instant? {
-        return value?.let { Instant.ofEpochMilli(it) }
+    fun toList(data: String): List<Int> {
+        return if (data.isEmpty()) emptyList() else data.split(",").map { it.toInt() }
     }
 }

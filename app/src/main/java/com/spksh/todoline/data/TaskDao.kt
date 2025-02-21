@@ -11,14 +11,26 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface TaskDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(task: Task)
+    suspend fun insertTask(task: Task)
 
     @Update
-    suspend fun update(task: Task)
+    suspend fun updateTask(task: Task)
 
     @Delete
-    suspend fun delete(task: Task)
+    suspend fun deleteTask(task: Task)
 
     @Query("SELECT * FROM task_table ORDER BY id ASC")
     fun getAllTasks(): Flow<List<Task>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTag(tag: Tag)
+
+    @Update
+    suspend fun updateTag(tag: Tag)
+
+    @Delete
+    suspend fun deleteTag(tag: Tag)
+
+    @Query("SELECT * FROM tag_table ORDER BY id ASC")
+    fun getAllTags(): Flow<List<Tag>>
 }

@@ -3,6 +3,8 @@ package com.spksh.todoline
 import org.junit.Test
 
 import org.junit.Assert.*
+import java.time.Instant
+import java.time.ZoneOffset
 
 /**
  * Example local unit test, which will execute on the development machine (host).
@@ -16,8 +18,5 @@ class ExampleUnitTest {
     }
     @Test
     fun test() {
-        //val model = MainViewModel()
-        ///model.deleteTodo(0)
-        //model.getTodo(0)
     }
 }

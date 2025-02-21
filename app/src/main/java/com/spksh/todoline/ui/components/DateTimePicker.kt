@@ -9,6 +9,7 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimeInput
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerState
 import androidx.compose.material3.rememberDatePickerState
@@ -17,52 +18,28 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.unit.sp
-import java.time.Instant
-import java.time.LocalDateTime
 import java.time.LocalTime
-import java.time.ZoneId
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 
-fun convertToUtc(localDateTime: LocalDateTime, zoneId: ZoneId): Instant {
-    return localDateTime.atZone(zoneId).toInstant()
-}
-
-fun convertToLocalTime(deadline: Instant, zoneId: ZoneId): LocalDateTime {
-    return deadline.atZone(zoneId).toLocalDateTime()
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DateTimePicker(
-    deadline: Instant? = null,
-    onDeadlineSelected: (Instant?) -> Unit = {}
+    deadline: String? = null,
+    onDeadlineSelected: (Long?) -> Unit = {}
 ) {
-    val zoneId = ZoneId.systemDefault()
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
-    var localDateState by remember { mutableStateOf<LocalDateTime?>(null) }
-    var text = "Choose Date"
-    deadline?.let {
-        text = convertToLocalTime(it, zoneId)
-            .format(DateTimeFormatter.ofPattern("MMM dd yyyy HH:mm"))
-    }
+    var localDateState by remember { mutableStateOf<Long?>(null) }
     TextButton(
         onClick = {showDatePicker = true}
     ) {
-        Text(text)
+        Text(deadline ?: "Choose Date")
     }
     if (showDatePicker) {
         DatePickerModal(
             onDateSelected = { dateState ->
-                localDateState = Instant
-                    .ofEpochMilli(dateState?:0)
-                    .atOffset(ZoneOffset.UTC)
-                    .toLocalDateTime()
-
+                localDateState = dateState
                 Log.i("mytag", "$localDateState")
                 showDatePicker = false
                 showTimePicker = true
@@ -73,15 +50,8 @@ fun DateTimePicker(
         )
     } else if (showTimePicker) {
         TimePickerWrap(
-
             onConfirm = { timeState ->
-                onDeadlineSelected(convertToUtc(
-                    localDateState
-                        ?.plusHours(timeState.hour.toLong())
-                        ?.plusMinutes(timeState.minute.toLong())
-                        ?: LocalDateTime.now(),
-                    zoneId
-                ))
+                onDeadlineSelected(localDateState?.plus(1000 * 60 * (timeState.minute + 60 * timeState.hour)))
                 showTimePicker = false
             },
             onDismiss = { showTimePicker = false }
@@ -109,9 +79,8 @@ fun TimePickerWrap(
         onDismiss = { onDismiss() },
         onConfirm = { onConfirm(timePickerState) }
     ) {
-        TimePicker(
-            state = timePickerState,
-        )
+        //TimeInput(state = timePickerState)
+        TimePicker(state = timePickerState)
     }
 }
 

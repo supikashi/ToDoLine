@@ -48,7 +48,11 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             Log.i("mytag", "set content")
-            ToDoLineApp(mainViewModel = viewModel(factory = MainViewModelFactory(app.repository)))
+            ToDoLineApp(
+                mainViewModel = viewModel(
+                    factory = MainViewModelFactory(app.taskRepository)
+                )
+            )
         }
     }
 }
@@ -85,14 +89,23 @@ fun ToDoLineApp(
                         tasks_2 = mainViewModel.tasks_2,
                         tasks_3 = mainViewModel.tasks_3,
                         tasks_4 = mainViewModel.tasks_4,
-                        onCheckBox = { task, isDone ->
-                            mainViewModel.updateTask(task.copy(isDone = isDone))
+                        tags = mainViewModel.tags,
+                        showTasksWithoutTags = mainViewModel.showTasksWithoutTags,
+                        onChangeTasksWithoutTagsVisibility = { mainViewModel.ChangeTasksWithoutTagsVisibility(it) },
+                        onTaskCheckedChanged = { task, progress ->
+                            mainViewModel.updateTask(task.task.copy(progress = if (progress) 1f else 0f))
                         },
                         onTodoClick = {id -> navController.navigate("todo_screen/$id")},
                         onAddButton = {
                             val id = mainViewModel.addTask()
                             navController.navigate("todo_screen/$id")
 
+                        },
+                        onTagCheckedChanged = { tag, checked ->
+                            mainViewModel.updateTag(tag.copy(show = checked))
+                        },
+                        onTagDeleted = { tag ->
+                            mainViewModel.deleteTag(tag)
                         }
                     )
                 }
@@ -109,18 +122,21 @@ fun ToDoLineApp(
                     Log.i("mytag", "navigate to task")
                     val todoId = navBackStackEntry.arguments?.getInt("id", 0) ?: 0
                     val task = mainViewModel.findTaskById(todoId)
+
                     Log.i("deletecheck", task.toString())
                     TaskScreen(
                         task = task,
+                        tasks = mainViewModel.tasks,
+                        tags = mainViewModel.tags,
                         onNameChanged = {name ->
-                            val newTask = task?.copy(name = name)
+                            val newTask = task?.task?.copy(name = name)
                             newTask?.let {
                                 Log.i("mytag", "name changed")
                                 mainViewModel.updateTask(it)
                             }
                         },
                         onDescriptionChanged = { description ->
-                            val newTask = task?.copy(description = description)
+                            val newTask = task?.task?.copy(description = description)
                             newTask?.let {
                                 Log.i("mytag", "description changed")
                                 mainViewModel.updateTask(it)
@@ -135,7 +151,7 @@ fun ToDoLineApp(
                         onBackClick = {navController.popBackStack()},
                         onImportanceChanged = { newImp ->
                             Log.i("mytag", "importance changed")
-                            val newTask = task?.copy(importance = newImp.toInt())
+                            val newTask = task?.task?.copy(importance = newImp.toInt())
                             newTask?.let {
                                 Log.i("mytag", "importance changed")
                                 mainViewModel.updateTask(it)
@@ -143,17 +159,68 @@ fun ToDoLineApp(
                         },
                         onUrgencyChanged = { newUrg ->
                             Log.i("mytag", "urg changed")
-                            val newTask = task?.copy(urgency = newUrg.toInt())
+                            val newTask = task?.task?.copy(urgency = newUrg.toInt())
                             newTask?.let {
                                 Log.i("mytag", "unrgency changed")
                                 mainViewModel.updateTask(it)
                             }
                         },
+                        onProgressChanged = { newProgress ->
+                            Log.i("mytag", "progress changed")
+                            val newTask = task?.task?.copy(progress = newProgress)
+                            newTask?.let {
+                                mainViewModel.updateTask(it)
+                            }
+                        },
                         onDeadlineChanged = { newDeadline ->
-                            val newTask = task?.copy(deadline = newDeadline)
+                            val newTask = task?.task?.copy(deadline = mainViewModel.toRightZone(newDeadline))
                             newTask?.let {
                                 Log.i("mytag", "deadline changed")
                                 mainViewModel.updateTask(it)
+                            }
+                        },
+                        onRequiredTimeChanged = { newTime ->
+                            task?.let {
+                                mainViewModel.updateTask(it.task.copy(requiredTime = newTime))
+                            }
+                        },
+                        onTagSelected = { tag, selected ->
+                            task?.let {
+                                if (selected) {
+                                    val newTask = it.task.copy(tagsIds = it.task.tagsIds.plus(tag.id))
+                                    mainViewModel.updateTask(newTask)
+                                } else {
+                                    val newTask = it.task.copy(tagsIds = it.task.tagsIds.minus(tag.id))
+                                    mainViewModel.updateTask(newTask)
+                                }
+                            }
+                        },
+                        onTagCreated = { tag ->
+                            task?.let {
+                                mainViewModel.addTag(tag)
+                            }
+                        },
+                        onTagDeleted = { tag ->
+                            task?.let {
+                                mainViewModel.deleteTag(tag)
+                            }
+                        },
+                        onCreateChildTask = {
+                            task?.let {
+                                val id = mainViewModel.addTask(Task(parentTaskId = it.task.id))
+                                mainViewModel.updateTask(it.task.copy(childTasksIds = it.task.childTasksIds.plus(id)))
+                                navController.navigate("todo_screen/$id")
+                            }
+                        },
+                        onChildTaskCheckBox = { childTask, progress ->
+                            mainViewModel.updateTask(childTask.task.copy(progress = if (progress) 1f else 0f))
+                        },
+                        onChildTaskClick = { id ->
+                            navController.navigate("todo_screen/$id")
+                        },
+                        onParentTaskClick = {
+                            task?.let {
+                                navController.navigate("todo_screen/${it.task.parentTaskId}")
                             }
                         }
                     )

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,38 +19,49 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.spksh.todoline.R
+import com.spksh.todoline.TaskUiModel
+import com.spksh.todoline.data.Tag
 import com.spksh.todoline.data.Task
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-
+import com.spksh.todoline.ui.components.TagItem
+import com.spksh.todoline.ui.components.TaskItem
 
 
 @Composable
 fun MatrixScreen(
     //tasks: List<Task> = emptyList(),
-    tasks_1: List<Task> = emptyList(),
-    tasks_2: List<Task> = emptyList(),
-    tasks_3: List<Task> = emptyList(),
-    tasks_4: List<Task> = emptyList(),
-    onCheckBox: (Task, Boolean) -> Unit = {_,_->},
+    tasks_1: List<TaskUiModel> = emptyList(),
+    tasks_2: List<TaskUiModel> = emptyList(),
+    tasks_3: List<TaskUiModel> = emptyList(),
+    tasks_4: List<TaskUiModel> = emptyList(),
+    tags: List<Tag> = emptyList(),
+    showTasksWithoutTags: Boolean = true,
+    onChangeTasksWithoutTagsVisibility: (Boolean) -> Unit = {},
+    onTaskCheckedChanged: (TaskUiModel, Boolean) -> Unit = { _, _->},
     onTodoClick: (Int) -> Unit = {},
     onAddButton: () -> Unit = {},
+    onTagCheckedChanged: (Tag, Boolean) -> Unit = { _, _->},
+    onTagDeleted: (Tag) -> Unit = {},
 ) {
+    var tagsExpanded by remember { mutableStateOf(false) }
     Box(modifier = Modifier.padding(horizontal = 16.dp)) {
         Log.i("mytag", "matrix screen")
         Column {
@@ -62,10 +74,43 @@ fun MatrixScreen(
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.headlineSmall
                 )
-                Text(
-                    text = stringResource(R.string.tags),
-                    style = MaterialTheme.typography.titleLarge
-                )
+                TextButton(
+                    onClick = {tagsExpanded = true}
+                ) {
+                    Text(
+                        text = stringResource(R.string.tags),
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                    DropdownMenu(
+                        expanded = tagsExpanded,
+                        onDismissRequest = {tagsExpanded = false},
+                    ) {
+                        DropdownMenuItem(
+                            text = {
+                                TagItem(
+                                    tag = Tag(name = "WithoutTags"),
+                                    selected = showTasksWithoutTags,
+                                    onCheckedChange = {onChangeTasksWithoutTagsVisibility(it)},
+                                    onDelete = {},
+                                )
+                            },
+                            onClick = { }
+                        )
+                        tags.forEach { tag ->
+                            DropdownMenuItem(
+                                text = {
+                                    TagItem(
+                                        tag = tag,
+                                        selected = tag.show,
+                                        onCheckedChange = {onTagCheckedChanged(tag, it)},
+                                        onDelete = {onTagDeleted(tag)},
+                                    )
+                                },
+                                onClick = { }
+                            )
+                        }
+                    }
+                }
                 IconButton(
                     onClick = {}
                 ) {
@@ -84,14 +129,14 @@ fun MatrixScreen(
                     Quadrant(
                         data = tasks_1,
                         name = "Important & Urgent",
-                        onCheckBox = onCheckBox,
+                        onCheckBox = onTaskCheckedChanged,
                         onTodoClick = onTodoClick,
                         modifier = Modifier.weight(1f)
                     )
                     Quadrant(
                         data = tasks_2,
                         name = "Important & Not Urgent",
-                        onCheckBox = onCheckBox,
+                        onCheckBox = onTaskCheckedChanged,
                         onTodoClick = onTodoClick,
                         modifier = Modifier.weight(1f)
                     )
@@ -103,14 +148,14 @@ fun MatrixScreen(
                     Quadrant(
                         data = tasks_3,
                         name = "Unimportant & Urgent",
-                        onCheckBox = onCheckBox,
+                        onCheckBox = onTaskCheckedChanged,
                         onTodoClick = onTodoClick,
                         modifier = Modifier.weight(1f)
                     )
                     Quadrant(
                         data = tasks_4,
                         name = "Unimportant & Not Urgent",
-                        onCheckBox = onCheckBox,
+                        onCheckBox = onTaskCheckedChanged,
                         onTodoClick = onTodoClick,
                         modifier = Modifier.weight(1f)
                     )
@@ -131,9 +176,9 @@ fun MatrixScreen(
 
 @Composable
 fun Quadrant(
-    data: List<Task> = emptyList(),
+    data: List<TaskUiModel> = emptyList(),
     name: String = "",
-    onCheckBox: (Task, Boolean) -> Unit = {_,_->},
+    onCheckBox: (TaskUiModel, Boolean) -> Unit = {_,_->},
     onTodoClick: (Int) -> Unit = {},
     modifier: Modifier
 ) {
@@ -149,13 +194,14 @@ fun Quadrant(
     ) {
         Text(
             text = name,
-            style = MaterialTheme.typography.bodySmall
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onPrimaryContainer
         )
         LazyColumn {
             items(data) { data ->
-                ToDoItem(
-                    onCheckBox = onCheckBox,
-                    onTodoClick = onTodoClick,
+                TaskItem(
+                    onCheckBox = {onCheckBox(data, it)},
+                    onTodoClick = {onTodoClick(data.task.id)},
                     task = data
                 )
             }
@@ -163,53 +209,6 @@ fun Quadrant(
     }
 }
 
-@Composable
-fun ToDoItem(
-    onCheckBox: (Task, Boolean) -> Unit = {_,_->},
-    onTodoClick: (Int) -> Unit = {},
-    task : Task
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onTodoClick(task.id) }
-    ) {
-        Checkbox(
-            checked = task.isDone,
-            onCheckedChange = {onCheckBox(task, it)},
-            modifier = Modifier.align(Alignment.Top)
-        )
-        Column {
-            Text(
-                text = task.name,
-                //maxLines = 1
-            )
-            Text(
-                text = task.deadline?.let {
-                    convertToLocalTime(it, ZoneId.systemDefault())
-                        .format(DateTimeFormatter.ofPattern("MMM dd HH:mm"))
-                } ?: "",
-                //maxLines = 1
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline
-            )
-        }
-    }
-}
-
-fun convertToLocalTime(deadline: Instant, zoneId: ZoneId): LocalDateTime {
-    return deadline.atZone(zoneId).toLocalDateTime()
-}
-
-@Preview(showBackground = true)
-@Composable
-fun ToDoItemPreview() {
-    ToDoItem(task = Task(
-        name = "Name",
-        deadline = Instant.now()
-    ))
-}
 @Preview
 @Composable
 fun MatrixScreenPreview() {
