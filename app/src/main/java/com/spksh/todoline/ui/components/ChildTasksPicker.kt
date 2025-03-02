@@ -7,7 +7,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimeInput
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,9 +20,9 @@ import com.spksh.todoline.TaskUiModel
 @Composable
 fun ChildTasksPicker(
     tasks: List<TaskUiModel> = emptyList(),
-    childTasksIds: List<Int> = emptyList(),
+    childTasksIds: List<Long> = emptyList(),
     onCreateTask: () -> Unit = {},
-    onTaskClick: (Int) -> Unit = {},
+    onTaskClick: (Long) -> Unit = {},
     onCheckBox: (TaskUiModel, Boolean) -> Unit = {_,_ -> },
 ) {
     var showDialog by remember { mutableStateOf(false) }
@@ -57,7 +56,7 @@ fun ChildTasksPicker(
                         TaskItem(
                             task = task,
                             onCheckBox = {onCheckBox(task, it)},
-                            onTodoClick = {
+                            onTaskClick = {
                                 showDialog = false
                                 onTaskClick(task.task.id)
                             },

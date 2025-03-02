@@ -2,56 +2,108 @@ package com.spksh.todoline
 
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.toMutableStateList
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.spksh.todoline.data.Tag
 import com.spksh.todoline.data.Task
 import com.spksh.todoline.data.TaskRepository
-import kotlinx.coroutines.flow.first
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import java.time.Instant
-import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import javax.inject.Inject
 
-class MainViewModel(
+@HiltViewModel
+class MainViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
     //private val dataStoreRepository: DataStoreRepository
 ) : ViewModel() {
 
-    private val _tasks = listOf<TaskUiModel>().toMutableStateList()
-    val tasks
-        get() = _tasks.toList().filter { task -> // не оптимально
-            (showTasksWithoutTags && task.task.tagsIds.isEmpty()) ||
-                    _tags.any { it.show && (it.id in task.task.tagsIds) }
+    private val _navigationEvents = MutableSharedFlow<NavigationEvent>()
+    val navigationEvents = _navigationEvents.asSharedFlow()
+
+    val uiState = combine(taskRepository.allTasks, taskRepository.allTags) { tasks, tags ->
+        UiState.State(tasks.map {it.toUiModel()}, tags)
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        UiState.State(emptyList(), emptyList())
+    )
+
+    sealed class UiState {
+        //object Loading : UiState()
+        data class State(
+            val tasks: List<TaskUiModel>,
+            val tags: List<Tag>
+        ) : UiState() {
+            val tasks_1
+                get() = tasks//.filter {it.task.progress != 1f }
+                    .filter {it.task.importance >= 6 && it.task.urgency >= 6}.filterTags().sortedBy { it.task.deadline ?: Long.MAX_VALUE }
+            val tasks_2
+                get() = tasks//.filter {it.task.progress != 1f }
+                    .filter {it.task.importance >= 6 && it.task.urgency <= 5}.filterTags().sortedBy { it.task.deadline ?: Long.MAX_VALUE }
+            val tasks_3
+                get() = tasks//.filter {it.task.progress != 1f }
+                    .filter {it.task.importance <= 5 && it.task.urgency >= 6}.filterTags().sortedBy { it.task.deadline ?: Long.MAX_VALUE }
+            val tasks_4
+                get() = tasks//.filter {it.task.progress != 1f }
+                    .filter {it.task.importance <= 5 && it.task.urgency <= 5}.filterTags().sortedBy { it.task.deadline ?: Long.MAX_VALUE }
+
+            private fun List<TaskUiModel>.filterTags() : List<TaskUiModel> {
+                return this.filter { task ->
+                    (/*showTasksWithoutTags &&*/ task.task.tagsIds.isEmpty()) ||
+                            tags.any { it.show && (it.id in task.task.tagsIds) }
+                }
+            }
         }
+        //data class Error(val message: String?) : UiState()
+    }
 
-    private val _tags = listOf<Tag>().toMutableStateList()
-    val tags
-        get() = _tags.toList()
+    fun openTaskScreen(id: Long) {
+        viewModelScope.launch {
+            _navigationEvents.emit(NavigationEvent.NavigateToTaskScreen(id.toString()))
+        }
+    }
 
-    val tasks_1
-        get() = tasks.toList().filter {it.task.importance >= 6 && it.task.urgency >= 6}
-    val tasks_2
-        get() = tasks.toList().filter {it.task.importance >= 6 && it.task.urgency <= 5}
-    val tasks_3
-        get() = tasks.toList().filter {it.task.importance <= 5 && it.task.urgency >= 6}
-    val tasks_4
-        get() = tasks.toList().filter {it.task.importance <= 5 && it.task.urgency <= 5}
+    fun popBackStack() {
+        viewModelScope.launch {
+            _navigationEvents.emit(NavigationEvent.NavigateBack)
+        }
+    }
+
+    fun openMatrixScreen() {
+        viewModelScope.launch {
+            _navigationEvents.emit(NavigationEvent.NavigateToMatrixScreen)
+        }
+    }
+
+    fun openCalendarScreen() {
+        viewModelScope.launch {
+            _navigationEvents.emit(NavigationEvent.NavigateToCalendarScreen)
+        }
+    }
+
+    sealed class NavigationEvent {
+        data class NavigateToTaskScreen(val id: String) : NavigationEvent()
+        object NavigateToMatrixScreen : NavigationEvent()
+        object NavigateToCalendarScreen : NavigationEvent()
+        object NavigateBack : NavigationEvent()
+    }
 
     private val _showTasksWithoutTags = mutableStateOf(true)
     val showTasksWithoutTags
         get() = _showTasksWithoutTags.value
 
-    private var nextTaskId = -1
-    private var nextTagId = -1
     private var zoneId = ZoneId.systemDefault()
-
     init {
-        runBlocking {
+        /*runBlocking {
             val dbTags = taskRepository.allTags.first()
             dbTags.forEach {
                 Log.i("mytag", "$it")
@@ -76,44 +128,38 @@ class MainViewModel(
             }
             _tasks.clear()
             dbValue.forEach { _tasks.add(it.toUiModel()) }
-        }
+        }*/
     }
 
-    fun findTaskById(id: Int): TaskUiModel? {
-        return _tasks.find {it.task.id == id}
+    fun findTaskById(id: Long): TaskUiModel? {
+        Log.i("mytag", "find")
+        return uiState.value.tasks.find {it.task.id == id}
     }
 
-    fun addTask(task: Task = Task()): Int {
-        val taskUiModel = task.copy(id = nextTaskId++).toUiModel()
-        _tasks.add(taskUiModel)
+    fun addTask() {
         viewModelScope.launch {
-            taskRepository.insertTask(taskUiModel.task)
+            val id = taskRepository.insertTask(Task())
+            openTaskScreen(id)
         }
-        return taskUiModel.task.id
+    }
+
+    fun addChildTask(parentTask: TaskUiModel) {
+        viewModelScope.launch {
+            val childId = taskRepository.insertTask(Task(parentTaskId = parentTask.task.id))
+            openTaskScreen(childId)
+            taskRepository.updateTask(
+                parentTask.task.copy(childTasksIds = parentTask.task.childTasksIds.plus(childId))
+            )
+        }
     }
 
     fun updateTask(task: Task) {
-        val index = _tasks.withIndex().find {it.value.task.id == task.id}?.index
-        index?.let {
-            _tasks[it] = task.toUiModel()
-        }
         viewModelScope.launch {
             taskRepository.updateTask(task)
         }
     }
 
     fun deleteTask(taskUiModel: TaskUiModel) {
-        val parentTask = findTaskById(taskUiModel.task.parentTaskId ?: -1)
-        parentTask?.let {
-            updateTask(it.task.copy(childTasksIds = it.task.childTasksIds.minus(taskUiModel.task.id)))
-        }
-        taskUiModel.task.childTasksIds.forEach { id ->
-            val childTask = findTaskById(id)
-            childTask?.let {
-                updateTask(it.task.copy(parentTaskId = null))
-            }
-        }
-        _tasks.remove(taskUiModel)
         viewModelScope.launch {
             taskRepository.deleteTask(taskUiModel.task)
         }
@@ -130,20 +176,14 @@ class MainViewModel(
         }
     }
 
-    fun addTag(tag: Tag): Int {
-        val tagWithId = tag.copy(id = nextTagId++)
-        _tags.add(tagWithId)
+    fun addTag(tag: Tag, task: TaskUiModel) {
         viewModelScope.launch {
-            taskRepository.insertTag(tagWithId)
+            val tagId = taskRepository.insertTag(tag)
+            taskRepository.updateTask(task.task.copy(tagsIds = task.task.tagsIds.plus(tagId)))
         }
-        return tagWithId.id
     }
 
     fun updateTag(tag: Tag) {
-        val index = _tags.withIndex().find {it.value.id == tag.id}?.index
-        if (index != null) {
-            _tags[index] = tag
-        }
         /*_tasks.forEach {
             if (tag.id in it.task.tagsIds) {
                 updateTask(it.task)
@@ -155,19 +195,13 @@ class MainViewModel(
     }
 
     fun deleteTag(tag: Tag) {
-        _tasks.forEach {
-            if (tag.id in it.task.tagsIds) {
-                updateTask(it.task.copy(tagsIds = it.task.tagsIds.minus(tag.id)))
-            }
-        }
-        _tags.remove(tag)
         viewModelScope.launch {
             taskRepository.deleteTag(tag)
         }
     }
 
-    fun findTagById(id: Int): Tag? {
-        return _tags.find {it.id == id}
+    fun findTagById(id: Long): Tag? {
+        return uiState.value.tags.find {it.id == id}
     }
 
     fun ChangeTasksWithoutTagsVisibility(show: Boolean) {
@@ -181,8 +215,7 @@ class MainViewModel(
                 .toLocalDateTime()
                 .format(DateTimeFormatter.ofPattern("MMM d yyyy H:mm"))
         }
-        //val tagsList: List<Tag> = this.tagsIds.mapNotNull { findTagById(it) }
-        return TaskUiModel(this, text, /*tagsList*/)
+        return TaskUiModel(this, text)
     }
 
 }

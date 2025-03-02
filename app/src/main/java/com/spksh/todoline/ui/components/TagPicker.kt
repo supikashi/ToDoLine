@@ -41,7 +41,7 @@ import com.spksh.todoline.data.Tag
 @Composable
 fun TagPicker(
     tags: List<Tag> = emptyList(),
-    selectedTagsIds: List<Int> = emptyList(),
+    selectedTagsIds: List<Long> = emptyList(),
     onDismiss: () -> Unit = {},
     onTagSelected: (Tag, Boolean) -> Unit = {_,_->},
     onTagCreated: (Tag) -> Unit = {},

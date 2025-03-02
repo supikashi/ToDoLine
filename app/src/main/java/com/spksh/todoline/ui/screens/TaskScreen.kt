@@ -38,6 +38,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.spksh.todoline.MainViewModel
 import com.spksh.todoline.R
 import com.spksh.todoline.TaskUiModel
 import com.spksh.todoline.data.Tag
@@ -48,27 +51,14 @@ import com.spksh.todoline.ui.components.TagPicker
 
 @Composable
 fun TaskScreen(
-    task: TaskUiModel? = null,
-    tasks: List<TaskUiModel> = emptyList(),
-    tags: List<Tag> = emptyList(),
-    onNameChanged: (String) -> Unit = {},
-    onDescriptionChanged: (String) -> Unit = {},
-    onDeleted: () -> Unit = {},
-    onBackClick: () -> Unit = {},
-    onImportanceChanged: (Float) -> Unit = {},
-    onUrgencyChanged: (Float) -> Unit = {},
-    onProgressChanged: (Float) -> Unit = {},
-    onDeadlineChanged: (Long?) -> Unit = {},
-    onRequiredTimeChanged: (Int) -> Unit = {},
-    onTagSelected: (Tag, Boolean) -> Unit = {_,_->},
-    onTagCreated: (Tag) -> Unit = {},
-    onTagDeleted: (Tag) -> Unit = {},
-    onCreateChildTask: () -> Unit = {},
-    onChildTaskCheckBox: (TaskUiModel, Boolean) -> Unit = {_,_->},
-    onChildTaskClick: (Int) -> Unit = {},
-    onParentTaskClick: () -> Unit = {},
+    taskId: Long = 0,
+    viewModel: MainViewModel = viewModel(),
 ) {
     Log.i("mytag", "todo screen")
+    //var task by remember { mutableStateOf(viewModel.findTaskById(taskId)) }
+    val task = viewModel.findTaskById(taskId)
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    //LaunchedEffect(id) {  }
     var expanded by remember { mutableStateOf(false) }
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         Row(
@@ -76,7 +66,7 @@ fun TaskScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier.fillMaxWidth().padding(8.dp)
         ) {
-            IconButton(onClick = {onBackClick()}) {
+            IconButton(onClick = {viewModel.popBackStack()}) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = stringResource(R.string.back_to_matrix_screen)
@@ -93,14 +83,26 @@ fun TaskScreen(
                 ) {
                     DropdownMenuItem(
                         text = {Text("Delete")},
-                        onClick = onDeleted
+                        onClick = {
+                            viewModel.popBackStack()
+                            task?.let {
+                                viewModel.deleteTask(it)
+                            }
+                        }
                     )
                 }
             }
         }
+        var name by remember { mutableStateOf(task?.task?.name ?: "") }
         TextField(
-            value = task?.task?.name ?: "",
-            onValueChange = {onNameChanged(it)},
+            value = name,
+            onValueChange = { newName ->
+                task?.let {
+                    Log.i("mytag", "name changed")
+                    viewModel.updateTask(it.task.copy(name = newName))
+                    name = newName
+                }
+            },
             singleLine = true,
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,
@@ -109,9 +111,16 @@ fun TaskScreen(
             placeholder = {Text("Task")},
             modifier = Modifier.fillMaxWidth()
         )
+        var description by remember { mutableStateOf(task?.task?.description ?: "") }
         TextField(
-            value = task?.task?.description ?: "",
-            onValueChange = {onDescriptionChanged(it)},
+            value = description,
+            onValueChange = { newDescription ->
+                task?.let {
+                    Log.i("mytag", "description changed")
+                    viewModel.updateTask(it.task.copy(description = newDescription))
+                    description = newDescription
+                }
+            },
             singleLine = false,
 
             colors = TextFieldDefaults.colors(
@@ -142,7 +151,12 @@ fun TaskScreen(
             Slider(
                 value = importance,
                 onValueChange = { importance = it },
-                onValueChangeFinished = { onImportanceChanged(importance) },
+                onValueChangeFinished = {
+                    task?.let {
+                        Log.i("mytag", "importance changed")
+                        viewModel.updateTask(it.task.copy(importance = importance.toInt()))
+                    }
+                },
                 valueRange = 1f..10f,
                 steps = 8,
             )
@@ -150,7 +164,12 @@ fun TaskScreen(
             Slider(
                 value = urgency,
                 onValueChange = { urgency = it },
-                onValueChangeFinished = { onUrgencyChanged(urgency) },
+                onValueChangeFinished = {
+                    task?.let {
+                        Log.i("mytag", "unrgency changed")
+                        viewModel.updateTask(it.task.copy(urgency = urgency.toInt()))
+                    }
+                },
                 valueRange = 1f..10f,
                 steps = 8
             )
@@ -162,7 +181,12 @@ fun TaskScreen(
                 Text("Deadline")
                 DateTimePicker(
                     deadline = task?.deadlineText,
-                    onDeadlineSelected = onDeadlineChanged
+                    onDeadlineSelected = { newDeadline ->
+                        task?.let {
+                            Log.i("mytag", "deadline changed")
+                            viewModel.updateTask(it.task.copy(deadline = viewModel.toRightZone(newDeadline)))
+                        }
+                    }
                 )
             }
             Row(
@@ -173,7 +197,11 @@ fun TaskScreen(
                 Text("Time Required")
                 RequiredTimePicker(
                     requiredTime = task?.task?.requiredTime ?: 0,
-                    onTimeSelected = onRequiredTimeChanged
+                    onTimeSelected = { newTime ->
+                        task?.let {
+                            viewModel.updateTask(it.task.copy(requiredTime = newTime))
+                        }
+                    }
                 )
             }
             Row(
@@ -186,15 +214,33 @@ fun TaskScreen(
                     modifier = Modifier.width(100.dp)
                 )
                 TagPicker(
-                    tags = tags,
+                    tags = uiState.tags,
                     selectedTagsIds = task?.task?.tagsIds ?: emptyList(),
                     onDismiss = {},
-                    onTagSelected = onTagSelected,
-                    onTagCreated = onTagCreated,
-                    onDeleted = onTagDeleted,
+                    onTagSelected = { tag, selected ->
+                        task?.let {
+                            if (selected) {
+                                val newTask = it.task.copy(tagsIds = it.task.tagsIds.plus(tag.id))
+                                viewModel.updateTask(newTask)
+                            } else {
+                                val newTask = it.task.copy(tagsIds = it.task.tagsIds.minus(tag.id))
+                                viewModel.updateTask(newTask)
+                            }
+                        }
+                    },
+                    onTagCreated = { tag ->
+                        task?.let {
+                            viewModel.addTag(tag, it)
+                        }
+                    },
+                    onDeleted = { tag ->
+                        task?.let {
+                            viewModel.deleteTag(tag)
+                        }
+                    },
                 )
             }
-            if (task?.task?.parentTaskId != null) {
+            task?.task?.parentTaskId?.let { parentId ->
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
@@ -202,7 +248,9 @@ fun TaskScreen(
                 )  {
                     Text(text = "Parent Task")
                     TextButton(
-                        onClick = onParentTaskClick
+                        onClick = {
+                            viewModel.openTaskScreen(parentId)
+                        }
                     ) {
                         Text("Go To Parent Task")
                     }
@@ -215,18 +263,31 @@ fun TaskScreen(
             )  {
                 Text(text = "Child Tasks")
                 ChildTasksPicker(
-                    tasks = tasks,
+                    tasks = uiState.tasks,
                     childTasksIds = task?.task?.childTasksIds ?: emptyList(),
-                    onCreateTask = onCreateChildTask,
-                    onCheckBox = onChildTaskCheckBox,
-                    onTaskClick = onChildTaskClick,
+                    onCreateTask = {
+                        task?.let {
+                            viewModel.addChildTask(it)
+                        }
+                    },
+                    onCheckBox = { childTask, progress ->
+                        viewModel.updateTask(childTask.task.copy(progress = if (progress) 1f else 0f))
+                    },
+                    onTaskClick = { id ->
+                        viewModel.openTaskScreen(id)
+                    },
                 )
             }
             Text("Progress")
             Slider(
                 value = progress,
                 onValueChange = { progress = it },
-                onValueChangeFinished = { onProgressChanged(progress) },
+                onValueChangeFinished = {
+                    task?.let {
+                        Log.i("mytag", "progress changed")
+                        viewModel.updateTask(it.task.copy(progress = progress))
+                    }
+                },
                 valueRange = 0f..1f,
                 steps = 9,
             )

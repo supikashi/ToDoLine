@@ -17,32 +17,36 @@ import com.spksh.todoline.data.Task
 @Composable
 fun TaskItem(
     onCheckBox: (Boolean) -> Unit = {},
-    onTodoClick: () -> Unit = {},
+    onTaskClick: () -> Unit = {},
     task : TaskUiModel
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onTodoClick() }
+            .clickable { onTaskClick() }
     ) {
         Checkbox(
             checked = task.task.progress == 1f,
             onCheckedChange = {onCheckBox(it)},
+            enabled = true,
             modifier = Modifier.align(Alignment.Top)
         )
         Column {
             Text(
                 text = task.task.name,
                 //maxLines = 1
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                //modifier = Modifier.
             )
-            Text(
-                text = task.deadlineText ?: "",
-                //maxLines = 1
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary
-            )
+            task.deadlineText?.let {
+                Text(
+                    text = it,
+                    //maxLines = 1
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
         }
     }
 }

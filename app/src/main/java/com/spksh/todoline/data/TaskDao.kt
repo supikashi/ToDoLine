@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface TaskDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertTask(task: Task)
+    suspend fun insertTask(task: Task) : Long
 
     @Update
     suspend fun updateTask(task: Task)
@@ -20,10 +20,13 @@ interface TaskDao {
     suspend fun deleteTask(task: Task)
 
     @Query("SELECT * FROM task_table ORDER BY id ASC")
-    fun getAllTasks(): Flow<List<Task>>
+    suspend fun getAllTasks(): List<Task>
+
+    @Query("SELECT * FROM task_table ORDER BY id ASC")
+    fun getAllTasksFlow(): Flow<List<Task>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertTag(tag: Tag)
+    suspend fun insertTag(tag: Tag) : Long
 
     @Update
     suspend fun updateTag(tag: Tag)
@@ -32,5 +35,8 @@ interface TaskDao {
     suspend fun deleteTag(tag: Tag)
 
     @Query("SELECT * FROM tag_table ORDER BY id ASC")
-    fun getAllTags(): Flow<List<Tag>>
+    fun getAllTags(): List<Tag>
+
+    @Query("SELECT * FROM tag_table ORDER BY id ASC")
+    fun getAllTagsFlow(): Flow<List<Tag>>
 }
