@@ -43,6 +43,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.androidx.ui.text.google.fonts)
     implementation(libs.hilt.android)
     kapt(libs.hilt.android.compiler)
     ksp(libs.androidx.room.compiler.v261)

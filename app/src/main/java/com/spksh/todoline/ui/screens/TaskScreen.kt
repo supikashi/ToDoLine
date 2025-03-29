@@ -2,18 +2,16 @@ package com.spksh.todoline.ui.screens
 
 import android.util.Log
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -21,13 +19,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,10 +38,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.spksh.todoline.MainViewModel
+import com.spksh.todoline.ui.MainViewModel
 import com.spksh.todoline.R
-import com.spksh.todoline.TaskUiModel
-import com.spksh.todoline.data.Tag
 import com.spksh.todoline.ui.components.ChildTasksPicker
 import com.spksh.todoline.ui.components.DateTimePicker
 import com.spksh.todoline.ui.components.RequiredTimePicker
@@ -64,7 +60,7 @@ fun TaskScreen(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth().padding(8.dp)
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp, start = 8.dp)
         ) {
             IconButton(onClick = {viewModel.popBackStack()}) {
                 Icon(
@@ -136,17 +132,18 @@ fun TaskScreen(
         Column(
             verticalArrangement = Arrangement.spacedBy(0.dp),
             modifier = Modifier
-                .background(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(16.dp))
+                .background(color = MaterialTheme.colorScheme.surfaceContainer, shape = RoundedCornerShape(16.dp))
                 .padding(16.dp)
         ) {
             Text(
                 text = "Task Parameters",
-                style = MaterialTheme.typography.titleLarge
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.primary
             )
 
             var importance by remember { mutableFloatStateOf((task?.task?.importance ?: 1).toFloat()) }
             var urgency by remember { mutableFloatStateOf((task?.task?.urgency ?: 1).toFloat()) }
-            var progress by remember { mutableFloatStateOf((task?.task?.progress ?: 0f)) }
+            var progress by remember { mutableFloatStateOf((task?.task?.progress ?: 0).toFloat()) }
             Text("Importance")
             Slider(
                 value = importance,
@@ -160,7 +157,22 @@ fun TaskScreen(
                 valueRange = 1f..10f,
                 steps = 8,
             )
-            Text("Urgency")
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Urgent Task")
+                Switch(
+                    checked = (task?.task?.urgency ?: 0) > 5,
+                    onCheckedChange = { check ->
+                        task?.let {
+                            viewModel.updateTask(it.task.copy(urgency = if (check) 10 else 1))
+                        }
+                    }
+                )
+            }
+            /*Text("Urgency")
             Slider(
                 value = urgency,
                 onValueChange = { urgency = it },
@@ -172,7 +184,7 @@ fun TaskScreen(
                 },
                 valueRange = 1f..10f,
                 steps = 8
-            )
+            )*/
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
@@ -271,7 +283,7 @@ fun TaskScreen(
                         }
                     },
                     onCheckBox = { childTask, progress ->
-                        viewModel.updateTask(childTask.task.copy(progress = if (progress) 1f else 0f))
+                        viewModel.updateTask(childTask.task.copy(progress = if (progress) childTask.task.requiredTime else 0))
                     },
                     onTaskClick = { id ->
                         viewModel.openTaskScreen(id)
@@ -285,11 +297,10 @@ fun TaskScreen(
                 onValueChangeFinished = {
                     task?.let {
                         Log.i("mytag", "progress changed")
-                        viewModel.updateTask(it.task.copy(progress = progress))
+                        viewModel.updateTask(it.task.copy(progress = progress.toInt()))
                     }
                 },
-                valueRange = 0f..1f,
-                steps = 9,
+                valueRange = 0f..(task?.task?.requiredTime ?: 1).toFloat(),
             )
         }
     }

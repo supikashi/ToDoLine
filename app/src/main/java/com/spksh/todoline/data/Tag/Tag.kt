@@ -1,4 +1,4 @@
-package com.spksh.todoline.data
+package com.spksh.todoline.data.Tag
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
@@ -7,6 +7,6 @@ import androidx.room.PrimaryKey
 data class Tag(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String = "",
-    val color: String = "#2ECC71",
+    val color: String = "#F5F5DC",
     val show: Boolean = true,
 )

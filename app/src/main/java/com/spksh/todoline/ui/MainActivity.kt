@@ -1,4 +1,4 @@
-package com.spksh.todoline
+package com.spksh.todoline.ui
 
 import android.os.Bundle
 import android.util.Log
@@ -35,10 +35,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.navigation.navigation
 import com.spksh.todoline.ui.screens.CalendarScreen
+import com.spksh.todoline.ui.screens.EventScreen
 import com.spksh.todoline.ui.screens.MatrixScreen
+import com.spksh.todoline.ui.screens.ScheduleSettingsScreen
+import com.spksh.todoline.ui.screens.MainSettingsScreen
 import com.spksh.todoline.ui.screens.TaskScreen
-import com.spksh.todoline.ui.theme.ToDoLineTheme
+import com.spksh.todoline.ui.screens.TimeSlotScreen
+import com.spksh.todoline.ui.theme.AppTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -53,6 +58,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
 @Composable
 fun ToDoLineApp(
     mainViewModel: MainViewModel = viewModel(),
@@ -62,7 +68,10 @@ fun ToDoLineApp(
         mainViewModel.navigationEvents.collect { event ->
             when (event) {
                 is MainViewModel.NavigationEvent.NavigateToTaskScreen -> {
-                    navController.navigate("todo_screen/${event.id}")
+                    navController.navigate("task_screen/${event.id}")
+                }
+                is MainViewModel.NavigationEvent.NavigateToEventScreen -> {
+                    navController.navigate("event_screen/${event.id}")
                 }
                 MainViewModel.NavigationEvent.NavigateToCalendarScreen -> {
                     navController.navigateSingleTopTo("calendar")
@@ -70,21 +79,31 @@ fun ToDoLineApp(
                 MainViewModel.NavigationEvent.NavigateToMatrixScreen -> {
                     navController.navigateSingleTopTo("matrix")
                 }
+                MainViewModel.NavigationEvent.NavigateToSettings.Root -> {
+                    navController.navigateSingleTopTo("settings")
+                }
+                MainViewModel.NavigationEvent.NavigateToSettings.ScheduleScreen -> {
+                    navController.navigate("schedule")
+                }
                 MainViewModel.NavigationEvent.NavigateBack -> {
                     navController.popBackStack()
+                }
+                is MainViewModel.NavigationEvent.NavigateToSettings.TimeSlotScreen -> {
+                    navController.navigate("timeslot_screen/${event.id}")
                 }
             }
         }
     }
     Log.i("mytag", "app recomp")
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    ToDoLineTheme {
+    AppTheme {
         Scaffold(
             bottomBar = {
                 BottomBar(
                     navBackStackEntry = navBackStackEntry,
                     openMatrixScreen = {mainViewModel.openMatrixScreen()},
-                    openMatrixCalendar = {mainViewModel.openCalendarScreen()}
+                    openCalendarScreen = {mainViewModel.openCalendarScreen()},
+                    openSettingsScreen = {mainViewModel.openSettingsScreen()}
                 )
             },
             modifier = Modifier.fillMaxSize()
@@ -104,10 +123,10 @@ fun ToDoLineApp(
                 }
                 composable(route = "calendar") {
                     Log.i("mytag", "navigate to calendar")
-                    CalendarScreen()
+                    CalendarScreen(viewModel = mainViewModel)
                 }
                 composable(
-                    route = "todo_screen/{id}",
+                    route = "task_screen/{id}",
                     arguments = listOf(
                         navArgument("id") { type = NavType.LongType }
                     )
@@ -119,6 +138,47 @@ fun ToDoLineApp(
                         viewModel = mainViewModel
                     )
                 }
+                composable(
+                    route = "event_screen/{id}",
+                    arguments = listOf(
+                        navArgument("id") { type = NavType.LongType }
+                    )
+                ) { navBackStackEntry ->
+                    val eventId = navBackStackEntry.arguments?.getLong("id") ?: 0
+                    Log.i("mytag", "navigate to event $eventId")
+                    EventScreen(
+                        eventId = eventId,
+                        viewModel = mainViewModel
+                    )
+                }
+                navigation(
+                    route = "settings",
+                    startDestination = "main"
+                ) {
+                    composable("main") {
+                        MainSettingsScreen(
+                            viewModel = mainViewModel
+                        )
+                    }
+                    composable("schedule") {
+                        ScheduleSettingsScreen(
+                            viewModel = mainViewModel
+                        )
+                    }
+                    composable(
+                        route = "timeslot_screen/{id}",
+                        arguments = listOf(
+                            navArgument("id") { type = NavType.LongType }
+                        )
+                    ) { navBackStackEntry ->
+                        val id = navBackStackEntry.arguments?.getLong("id") ?: 0
+                        Log.i("mytag", "navigate to timeslot $id")
+                        TimeSlotScreen(
+                            id = id,
+                            viewModel = mainViewModel
+                        )
+                    }
+                }
             }
         }
     }
@@ -128,7 +188,8 @@ fun ToDoLineApp(
 fun BottomBar(
     navBackStackEntry: NavBackStackEntry?,
     openMatrixScreen: () -> Unit,
-    openMatrixCalendar: () -> Unit,
+    openCalendarScreen: () -> Unit,
+    openSettingsScreen: () -> Unit
 ) {
     NavigationBar(
         modifier = Modifier.height(80.dp),
@@ -137,7 +198,7 @@ fun BottomBar(
 
         NavigationBarItem(
             selected = navBackStackEntry?.destination?.route == "calendar",
-            onClick = openMatrixCalendar,
+            onClick = openCalendarScreen,
             icon = { Icon(imageVector = Icons.Filled.DateRange, null) },
         )
         NavigationBarItem(
@@ -147,7 +208,7 @@ fun BottomBar(
         )
         NavigationBarItem(
             selected = false,
-            onClick = {},
+            onClick = openSettingsScreen,
             icon = { Icon(imageVector = Icons.Filled.Settings, null) },
         )
     }

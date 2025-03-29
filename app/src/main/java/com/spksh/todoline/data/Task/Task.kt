@@ -1,4 +1,4 @@
-package com.spksh.todoline.data
+package com.spksh.todoline.data.Task
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
@@ -11,9 +11,9 @@ data class Task(
     val importance: Int = 10,
     val urgency: Int = 10,
     val deadline: Long? = null,
-    val requiredTime: Int = 0,
+    val requiredTime: Int = 60,
     val tagsIds: List<Long> = emptyList(),
     val parentTaskId: Long? = null,
     val childTasksIds: List<Long> = emptyList(),
-    val progress: Float = 0f,
+    val progress: Int = 0,
 )

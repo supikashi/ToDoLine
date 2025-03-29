@@ -14,7 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.spksh.todoline.TaskUiModel
+import com.spksh.todoline.ui.model.TaskUiModel
 
 
 @Composable
@@ -23,7 +23,7 @@ fun ChildTasksPicker(
     childTasksIds: List<Long> = emptyList(),
     onCreateTask: () -> Unit = {},
     onTaskClick: (Long) -> Unit = {},
-    onCheckBox: (TaskUiModel, Boolean) -> Unit = {_,_ -> },
+    onCheckBox: (TaskUiModel, Boolean) -> Unit = { _, _ -> },
 ) {
     var showDialog by remember { mutableStateOf(false) }
     TextButton(
