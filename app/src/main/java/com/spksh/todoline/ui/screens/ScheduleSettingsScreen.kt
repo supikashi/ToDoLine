@@ -54,7 +54,7 @@ fun ScheduleSettingsScreen(
                 )
 
                 IconButton(
-                    onClick = { viewModel.calculateTimeline() }
+                    onClick = { }
                 ) {
                     Icon(
                         imageVector = Icons.Filled.MoreVert,

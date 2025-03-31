@@ -19,6 +19,7 @@ import com.spksh.todoline.ui.model.EventUiModel
 import com.spksh.todoline.ui.model.TaskUiModel
 import com.spksh.todoline.ui.model.TimeSlotUiModel
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
@@ -94,6 +95,13 @@ class MainViewModel @Inject constructor(
 
             val tasksAndEventsByDays = activities
                 .groupBy { it.startTimeLocal.toLocalDate() }
+
+            val tasksWithBadDeadline = activities
+                .asSequence()
+                .filter { it.isTask && !it.isDeadlineMet }
+                .map { it.activityId }.toSet().toList()
+                .mapNotNull { id -> tasks.find { it.task.id == id } }
+                .toList()
 
             private fun List<TaskUiModel>.filterTags() : List<TaskUiModel> {
                 return this.filter { task ->
@@ -489,12 +497,15 @@ class MainViewModel @Inject constructor(
         return taskIndex
     }
 
-    fun calculateTimeline() {
+    fun calculateTimeline(
+        tasklist: List<TaskUiModel>,
+        saveTimeline: Boolean = true,
+    ) : List<TaskUiModel> {
         val startTime = LocalDateTime.now().withNano(0).withSecond(0)
         val eventActivities = uiState.value.activities
             .filter { !it.isTask }
             .filter { it.endTimeLocal.isAfter(startTime) }
-        val tasks = uiState.value.tasks
+        val tasks = tasklist
             .filter { it.task.progress != it.task.requiredTime }
             .map { it.copy(task = it.task.copy(requiredTime = (it.task.requiredTime - it.task.progress))) }
         var taskIndex = 0
@@ -516,10 +527,53 @@ class MainViewModel @Inject constructor(
             freeTime = f.first
         }
         Log.i("mytag", timelinedTasks.toString())
-        viewModelScope.launch {
-            timeLinedActivityRepository.deleteAllTasks()
-            timeLinedActivityRepository.insertAll(timelinedTasks.map {it.toActivity()})
+        if (saveTimeline) {
+            viewModelScope.launch {
+                timeLinedActivityRepository.deleteAllTasks()
+                timeLinedActivityRepository.insertAll(timelinedTasks.map {it.toActivity()})
+            }
         }
+        return timelinedTasks
+            .asSequence()
+            .filter { it.isTask && !it.isDeadlineMet }
+            .map { it.activityId }.toSet().toList()
+            .mapNotNull { id -> tasklist.find {it.task.id == id} }
+            .toList()
+    }
+
+    fun calculateTimelineByImportance() : List<TaskUiModel> {
+        val tasks = uiState.value.tasks.toMutableList()
+        while (true) {
+            val overdueTasks = calculateTimeline(tasks, false)
+                .filter { it.task.importance > 5 }
+                .sortedBy {  it.deadlineLocal ?: if (it.task.urgency < 6) LocalDateTime.MAX else LocalDateTime.MIN }
+            var flag = false
+            for (overdueTask in overdueTasks) {
+                var lastUnimportantTaskIndex: Int? = null
+                for (i in 0 until tasks.size) {
+                    if (tasks[i].task.id == overdueTask.task.id) {
+                        lastUnimportantTaskIndex?.let {
+                            for (j in it until i) {
+                                tasks[j] = tasks[j + 1].also { tasks[j + 1] = tasks[j] }
+                            }
+                            flag = true
+                        }
+                    } else if (tasks[i].task.importance < 6) {
+                        lastUnimportantTaskIndex = i
+                    }
+                    if (flag) {
+                        break
+                    }
+                }
+                if (flag) {
+                    break
+                }
+            }
+            if (flag.not()) {
+                break
+            }
+        }
+        return calculateTimeline(tasks, true)
     }
 
     private fun getActivitiesByEvent(event: EventUiModel) : List<TimeLinedActivity>{

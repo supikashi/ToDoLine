@@ -2,6 +2,7 @@ package com.spksh.todoline.ui.screens
 
 import android.widget.CheckBox
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,17 +25,25 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -61,18 +70,25 @@ import com.spksh.todoline.ui.model.EventUiModel
 import com.spksh.todoline.ui.model.TaskUiModel
 import com.spksh.todoline.ui.model.TimeSlotUiModel
 import com.spksh.todoline.ui.theme.extendedDark
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.max
 import kotlin.math.min
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarScreen(
     viewModel: MainViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var isTimeLine by rememberSaveable { mutableStateOf(true) }
+    var openBottomSheet by rememberSaveable { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val bottomSheetState =
+        rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val tasksWithBadDeadline = remember { mutableStateListOf<TaskUiModel>() }
     Box {
         Column {
             Row(
@@ -176,7 +192,15 @@ fun CalendarScreen(
                 .align(Alignment.BottomEnd)
         ) {
             FloatingActionButton(
-                onClick = { viewModel.calculateTimeline() },
+                onClick = {
+                    scope.launch {
+                        tasksWithBadDeadline.clear()
+                        tasksWithBadDeadline.addAll(viewModel.calculateTimeline(uiState.tasks))
+                        if (tasksWithBadDeadline.isNotEmpty()) {
+                            openBottomSheet = true
+                        }
+                    }
+                },
             ) {
                 Icon(imageVector = Icons.Filled.Refresh, contentDescription = null)
             }
@@ -185,6 +209,108 @@ fun CalendarScreen(
                 onClick = { viewModel.addEvent(EventUiModel()) },
             ) {
                 Icon(imageVector = Icons.Filled.Add, contentDescription = "Add Task")
+            }
+        }
+    }
+    if (openBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { openBottomSheet = false },
+            sheetState = bottomSheetState,
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth()
+            ) {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            tasksWithBadDeadline.clear()
+                            tasksWithBadDeadline.addAll(viewModel.calculateTimelineByImportance())
+                            openBottomSheet = tasksWithBadDeadline.isNotEmpty()
+                        }
+                    },
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                ) {
+                    Text(text = "Optimize Important Tasks")
+                }
+                Text(
+                    text = "Potentially Overdue Tasks",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp)
+                )
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (tasksWithBadDeadline.any { it.task.importance > 5 }) {
+                        item {
+                            Text(
+                                text = "Important"
+                            )
+                        }
+                    }
+                    items(tasksWithBadDeadline.filter { it.task.importance > 5 }) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors().copy(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .clickable {  }
+                                    .padding(8.dp)
+                                    .padding(horizontal = 8.dp)
+                                    .fillMaxSize()
+                            ) {
+                                Text(
+                                    text = it.task.name,
+                                    //maxLines = 1
+                                    color = MaterialTheme.colorScheme.onSurface
+                                    //modifier = Modifier.
+                                )
+                                it.deadlineText?.let {
+                                    Text(
+                                        text = it,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    if (tasksWithBadDeadline.any { it.task.importance < 6 }) {
+                        item {
+                            Text("Unimportant")
+                        }
+                    }
+                    items(tasksWithBadDeadline.filter { it.task.importance < 6 }) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors().copy(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .clickable {  }
+                                    .padding(8.dp)
+                                    .padding(horizontal = 8.dp)
+                                    .fillMaxSize()
+                            ) {
+                                Text(
+                                    text = it.task.name,
+                                    //maxLines = 1
+                                    color = MaterialTheme.colorScheme.onSurface
+                                    //modifier = Modifier.
+                                )
+                                it.deadlineText?.let {
+                                    Text(
+                                        text = it,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
