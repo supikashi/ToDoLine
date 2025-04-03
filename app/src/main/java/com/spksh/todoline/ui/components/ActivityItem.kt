@@ -170,7 +170,21 @@ fun TaskActivityItem(
                 } else {
                     ""
                 }
-                Text(text = task?.task?.name + dayText)
+                val name = task?.let {
+                    if (activity.subtaskId == 0L) {
+                        it.task.name
+                    } else {
+                        it.task.subTasks.find { it.id == activity.subtaskId }?.name
+                    }
+                } ?: ""
+                Text(text = name + dayText)
+                if (activity.subtaskId != 0L) {
+                    Text(
+                        text = "Subtask of: ${task?.task?.name}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 task?.deadlineText?.let {
                     Text(
                         text = "Deadline: $it",

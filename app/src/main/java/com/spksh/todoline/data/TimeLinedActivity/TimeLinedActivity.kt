@@ -10,8 +10,9 @@ data class TimeLinedActivity(
     val endTime: Long = 0,
     val numberOfParts: Int = 1,
     val partIndex: Int = 1,
+    val activityId: Long = 0,
     val isTask: Boolean = false,
     val isDone: Boolean = false,
     val isDeadlineMet: Boolean = true,
-    val activityId: Long = 0,
+    val subtaskId: Long = 0,
 )

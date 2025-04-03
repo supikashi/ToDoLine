@@ -1,6 +1,9 @@
 package com.spksh.todoline.data
 
 import androidx.room.TypeConverter
+import com.spksh.todoline.data.Task.SubTask
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 class Converters {
     @TypeConverter
@@ -22,5 +25,19 @@ class Converters {
     @TypeConverter
     fun toListOfBooleans(data: String): List<Boolean> {
         return if (data.isEmpty()) emptyList() else data.split(",").map { it == "1" }
+    }
+
+    @TypeConverter
+    fun fromListOfSubTasks(list: List<SubTask>): String {
+        return Json.encodeToString(list)
+    }
+
+    @TypeConverter
+    fun toListOfSubTasks(data: String): List<SubTask> {
+        /*return if (data.isEmpty())
+            emptyList()
+        else
+            Json.decodeFromString<List<SubTask>>(data)*/
+        return Json.decodeFromString<List<SubTask>>(data)
     }
 }

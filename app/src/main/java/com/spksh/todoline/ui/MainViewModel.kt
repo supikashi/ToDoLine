@@ -389,9 +389,9 @@ class MainViewModel @Inject constructor(
     private fun addTimelinedTasks(
         timelinedTasks: MutableList<ActivityUiModel>,
         tmpActivityList: MutableList<MutableList<ActivityUiModel>>,
-        tmpTasks: MutableList<Pair<TaskUiModel, Int>>,
+        tmpTasks: MutableList<Pair<Pair<TaskUiModel, Long>, Int>>,
         freeTime: List<FreeTime>,
-        tasks: List<TaskUiModel>,
+        tasks: List<Pair<TaskUiModel,Long>>,
         usedTasks: MutableList<Boolean>,
         startIndex: Int
     ) : Int {
@@ -408,7 +408,7 @@ class MainViewModel @Inject constructor(
                 }
                 var suitableTaskIndex: Int? = null
                 for (i in taskIndex until tasks.size) {
-                    if (!usedTasks[i] && (time.tagId == 0L || time.tagId in tasks[i].task.tagsIds)) {
+                    if (!usedTasks[i] && (time.tagId == 0L || time.tagId in tasks[i].first.task.tagsIds)) {
                         suitableTaskIndex = i
                         break
                     }
@@ -416,7 +416,7 @@ class MainViewModel @Inject constructor(
                 var suitableTmpTaskIndex: Int? = null
                 for (i in 0 until tmpTasks.size) {
                     if (suitableTaskIndex == null || suitableTaskIndex > tmpTasks[i].second) {
-                        if (time.tagId == 0L || time.tagId in tmpTasks[i].first.task.tagsIds) {
+                        if (time.tagId == 0L || time.tagId in tmpTasks[i].first.first.task.tagsIds) {
                             if (suitableTmpTaskIndex == null || tmpTasks[suitableTmpTaskIndex].second > tmpTasks[i].second) {
                                 suitableTmpTaskIndex = i
                             }
@@ -427,24 +427,26 @@ class MainViewModel @Inject constructor(
                 if (suitableTmpTaskIndex != null)  {
                     val i = suitableTmpTaskIndex
                     val tmpTask = tmpTasks[i].first
-                    val tmpEnd = tmpStart.plusMinutes(tmpTask.task.requiredTime.toLong())
+                    val tmpEnd = tmpStart.plusMinutes(tmpTask.first.task.requiredTime.toLong())
                     if (tmpEnd.isAfter(time.endTime)) {
                         tmpActivityList[i].add(
                             ActivityUiModel(
                                 isTask = true,
-                                activityId = tmpTask.task.id,
+                                activityId = tmpTask.first.task.id,
+                                subtaskId = tmpTask.second,
                                 startTimeLocal = tmpStart,
                                 endTimeLocal = time.endTime,
                             )
                         )
-                        val timeRemaining = tmpTask.task.requiredTime - ChronoUnit.MINUTES.between(tmpStart, time.endTime).toInt()
-                        tmpTasks[i] = Pair(tmpTask.copy(task = tmpTask.task.copy(requiredTime = timeRemaining)), tmpTasks[i].second)
+                        val timeRemaining = tmpTask.first.task.requiredTime - ChronoUnit.MINUTES.between(tmpStart, time.endTime).toInt()
+                        tmpTasks[i] = Pair(tmpTask.copy(first = tmpTask.first.copy(task = tmpTask.first.task.copy(requiredTime = timeRemaining))), tmpTasks[i].second)
                         tmpStart = time.endTime
                     } else {
                         tmpActivityList[i].add(
                             ActivityUiModel(
                                 isTask = true,
-                                activityId = tmpTask.task.id,
+                                activityId = tmpTask.first.task.id,
+                                subtaskId = tmpTask.second,
                                 startTimeLocal = tmpStart,
                                 endTimeLocal = tmpEnd,
                             )
@@ -453,7 +455,7 @@ class MainViewModel @Inject constructor(
                             activity.copy(
                                 numberOfParts = tmpActivityList[i].size,
                                 partIndex = index + 1,
-                                isDeadlineMet = tmpTask.deadlineLocal?.let {!it.isBefore(tmpEnd)} ?: true
+                                isDeadlineMet = tmpTask.first.deadlineLocal?.let {!it.isBefore(tmpEnd)} ?: true
                             )
                         })
                         tmpTasks.removeAt(i)
@@ -463,25 +465,27 @@ class MainViewModel @Inject constructor(
                 } else if (suitableTaskIndex != null) {
                     val i = suitableTaskIndex
                     usedTasks[i] = true
-                    val tmpEnd = tmpStart.plusMinutes(tasks[i].task.requiredTime.toLong())
+                    val tmpEnd = tmpStart.plusMinutes(tasks[i].first.task.requiredTime.toLong())
                     if (tmpEnd.isAfter(time.endTime)) {
                         tmpActivityList.add(mutableListOf(ActivityUiModel(
                             isTask = true,
-                            activityId = tasks[i].task.id,
+                            activityId = tasks[i].first.task.id,
+                            subtaskId = tasks[i].second,
                             startTimeLocal = tmpStart,
                             endTimeLocal = time.endTime,
                         )))
-                        val timeRemaining = tasks[i].task.requiredTime - ChronoUnit.MINUTES.between(tmpStart, time.endTime).toInt()
-                        tmpTasks.add(Pair(tasks[i].copy(task = tasks[i].task.copy(requiredTime = timeRemaining)), i))
+                        val timeRemaining = tasks[i].first.task.requiredTime - ChronoUnit.MINUTES.between(tmpStart, time.endTime).toInt()
+                        tmpTasks.add(Pair(tasks[i].copy(first = tasks[i].first.copy(task = tasks[i].first.task.copy(requiredTime = timeRemaining))), i))
                         tmpStart = time.endTime
                     } else {
                         timelinedTasks.add(
                             ActivityUiModel(
                                 isTask = true,
-                                isDeadlineMet = tasks[i].deadlineLocal?.let {!it.isBefore(tmpEnd)} ?: true,
-                                activityId = tasks[i].task.id,
+                                activityId = tasks[i].first.task.id,
+                                subtaskId = tasks[i].second,
                                 startTimeLocal = tmpStart,
                                 endTimeLocal = tmpEnd,
+                                isDeadlineMet = tasks[i].first.deadlineLocal?.let {!it.isBefore(tmpEnd)} ?: true,
                             )
                         )
                         tmpStart = tmpEnd
@@ -507,10 +511,30 @@ class MainViewModel @Inject constructor(
             .filter { it.endTimeLocal.isAfter(startTime) }
         val tasks = tasklist
             .filter { it.task.progress != it.task.requiredTime }
-            .map { it.copy(task = it.task.copy(requiredTime = (it.task.requiredTime - it.task.progress))) }
+            .flatMap {
+                it.task.subTasks.mapNotNull { subTask ->
+                    if (subTask.requiredTime != subTask.progress) {
+                        Pair(it.copy(task = it.task.copy(
+                            requiredTime = subTask.requiredTime,
+                            progress = subTask.progress
+                        )), subTask.id)
+                    } else {
+                        null
+                    }
+                }.plus(Pair(it, 0L))
+            }
+            .map {
+                it.copy(
+                    first = it.first.copy(
+                        task = it.first.task.copy(
+                            requiredTime = (it.first.task.requiredTime - it.first.task.progress)
+                        )
+                    )
+                )
+            }
         var taskIndex = 0
         val tmpActivityList: MutableList<MutableList<ActivityUiModel>> = mutableListOf()
-        val tmpTasks: MutableList<Pair<TaskUiModel, Int>> = mutableListOf()
+        val tmpTasks: MutableList<Pair<Pair<TaskUiModel, Long>, Int>> = mutableListOf()
         val usedTasks = MutableList(tasks.size) { false }
         var currentDate = startTime.toLocalDate()
         var freeTime = listOf<FreeTime>()
@@ -526,11 +550,20 @@ class MainViewModel @Inject constructor(
             eventIndex = f.second
             freeTime = f.first
         }
-        Log.i("mytag", timelinedTasks.toString())
+        val overdueTasks = mutableMapOf<Long, Boolean>()
+        timelinedTasks.forEach {
+            if (it.subtaskId == 0L && it.partIndex == it.numberOfParts) {
+                overdueTasks[it.activityId] = it.isDeadlineMet
+            }
+        }
         if (saveTimeline) {
             viewModelScope.launch {
                 timeLinedActivityRepository.deleteAllTasks()
-                timeLinedActivityRepository.insertAll(timelinedTasks.map {it.toActivity()})
+                timeLinedActivityRepository.insertAll(
+                    timelinedTasks.map {
+                        it.copy(isDeadlineMet = overdueTasks.getValue(it.activityId))
+                    }.map {it.toActivity() }
+                )
             }
         }
         return timelinedTasks
@@ -669,10 +702,11 @@ class MainViewModel @Inject constructor(
             endTime = this.endTime,
             numberOfParts = this.numberOfParts,
             partIndex = this.partIndex,
+            activityId = this.activityId,
             isTask = this.isTask,
             isDone = this.isDone,
             isDeadlineMet = this.isDeadlineMet,
-            activityId = this.activityId,
+            subtaskId = this.subtaskId,
             startTimeLocal = Instant.ofEpochMilli(this.startTime)
                 .atZone(zoneId)
                 .toLocalDateTime(),
@@ -688,10 +722,11 @@ class MainViewModel @Inject constructor(
             endTime = this.endTimeLocal.atZone(zoneId).toInstant().toEpochMilli(),
             numberOfParts = this.numberOfParts,
             partIndex = this.partIndex,
+            activityId = this.activityId,
             isTask = this.isTask,
             isDone = this.isDone,
             isDeadlineMet = this.isDeadlineMet,
-            activityId = this.activityId,
+            subtaskId = this.subtaskId,
         )
     }
     private fun TimeSlot.toUiModel(): TimeSlotUiModel {

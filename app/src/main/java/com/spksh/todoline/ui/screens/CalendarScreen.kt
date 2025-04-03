@@ -144,9 +144,17 @@ fun CalendarScreen(
                                     viewModel.openEventScreen(id)
                             },
                             onCheckBoxClick = { task, activity, progress ->
-                                val newProgress = min(max(0, task.task.progress + progress), task.task.requiredTime)
-                                viewModel.updateTask(task.task.copy(progress = newProgress))
                                 viewModel.updateTimelinedActivity(activity.copy(isDone = !activity.isDone))
+                                if (activity.subtaskId == 0L) {
+                                    val newProgress = min(max(0, task.task.progress + progress), task.task.requiredTime)
+                                    viewModel.updateTask(task.task.copy(progress = newProgress))
+                                } else {
+                                    val i = task.task.subTasks.indexOfFirst { it.id == activity.subtaskId }
+                                    val newProgress = min(max(0, task.task.subTasks[i].progress + progress), task.task.subTasks[i].requiredTime)
+                                    viewModel.updateTask(task.task.copy(subTasks = task.task.subTasks.mapIndexed { index, subTask ->
+                                        if (index == i) subTask.copy(progress = newProgress) else subTask
+                                    }))
+                                }
                             },
                             findEventById = { viewModel.findEventById(it) },
                             findTaskById = { viewModel.findTaskById(it) },
@@ -173,9 +181,17 @@ fun CalendarScreen(
                                         viewModel.openEventScreen(item.activityId)
                                 },
                                 onCheckBoxClick = { task, progress ->
-                                    val newProgress = min(max(0, task.task.progress + progress), task.task.requiredTime)
-                                    viewModel.updateTask(task.task.copy(progress = newProgress))
                                     viewModel.updateTimelinedActivity(item.copy(isDone = !item.isDone))
+                                    if (item.subtaskId == 0L) {
+                                        val newProgress = min(max(0, task.task.progress + progress), task.task.requiredTime)
+                                        viewModel.updateTask(task.task.copy(progress = newProgress))
+                                    } else {
+                                        val i = task.task.subTasks.indexOfFirst { it.id == item.subtaskId }
+                                        val newProgress = min(max(0, task.task.subTasks[i].progress + progress), task.task.subTasks[i].requiredTime)
+                                        viewModel.updateTask(task.task.copy(subTasks = task.task.subTasks.mapIndexed { index, subTask ->
+                                            if (index == i) subTask.copy(progress = newProgress) else subTask
+                                        }))
+                                    }
                                 },
                                 findEventById = { viewModel.findEventById(it) },
                                 findTaskById = { viewModel.findTaskById(it) }
@@ -388,9 +404,9 @@ fun TimeLine(
             Box(
                 modifier = Modifier.padding(start = 16.dp)
             ) {
-                repeat(24) { hour ->
+                repeat(23) { hour ->
                     HorizontalDivider(
-                        modifier = Modifier.offset(y = (60 * hour).dp).padding(horizontal = 10.dp)
+                        modifier = Modifier.offset(y = (60 * (hour + 1)).dp).padding(horizontal = 10.dp)
                     )
                 }
                 todayActivities.forEach {

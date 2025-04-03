@@ -5,6 +5,7 @@ plugins {
     id("kotlin-kapt")
     id("com.google.dagger.hilt.android")
     id("com.google.devtools.ksp")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
@@ -43,6 +44,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.ui.text.google.fonts)
     implementation(libs.hilt.android)
     kapt(libs.hilt.android.compiler)

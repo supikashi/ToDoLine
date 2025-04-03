@@ -8,13 +8,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -40,9 +41,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.spksh.todoline.ui.MainViewModel
 import com.spksh.todoline.R
+import com.spksh.todoline.data.Task.SubTask
 import com.spksh.todoline.ui.components.ChildTasksPicker
 import com.spksh.todoline.ui.components.DateTimePicker
 import com.spksh.todoline.ui.components.RequiredTimePicker
+import com.spksh.todoline.ui.components.SubTaskItem
 import com.spksh.todoline.ui.components.TagPicker
 
 @Composable
@@ -56,6 +59,9 @@ fun TaskScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     //LaunchedEffect(id) {  }
     var expanded by remember { mutableStateOf(false) }
+    var importance by remember { mutableFloatStateOf((task?.task?.importance ?: 1).toFloat()) }
+    var urgency by remember { mutableFloatStateOf((task?.task?.urgency ?: 1).toFloat()) }
+    var progress by remember { mutableFloatStateOf((task?.task?.progress ?: 0).toFloat()) }
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -80,6 +86,7 @@ fun TaskScreen(
                     DropdownMenuItem(
                         text = {Text("Delete")},
                         onClick = {
+                            expanded = false
                             viewModel.popBackStack()
                             task?.let {
                                 viewModel.deleteTask(it)
@@ -108,27 +115,114 @@ fun TaskScreen(
             modifier = Modifier.fillMaxWidth()
         )
         var description by remember { mutableStateOf(task?.task?.description ?: "") }
-        TextField(
-            value = description,
-            onValueChange = { newDescription ->
-                task?.let {
-                    Log.i("mytag", "description changed")
-                    viewModel.updateTask(it.task.copy(description = newDescription))
-                    description = newDescription
-                }
-            },
-            singleLine = false,
+        LazyColumn(
+            modifier = Modifier.weight(1f)
+        ){
+            item {
+                TextField(
+                    value = description,
+                    onValueChange = { newDescription ->
+                        task?.let {
+                            Log.i("mytag", "description changed")
+                            viewModel.updateTask(it.task.copy(description = newDescription))
+                            description = newDescription
+                        }
+                    },
+                    singleLine = false,
 
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                focusedIndicatorColor = Color.Transparent,
-                disabledIndicatorColor = Color.Transparent
-            ),
-            placeholder = {Text("Description")},
-            modifier = Modifier.fillMaxWidth().weight(1f)
-        )
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent
+                    ),
+                    placeholder = {Text("Description")},
+                    //modifier = Modifier.fillMaxWidth().weight(1f)
+                )
+            }
+            task?.let {
+                items(
+                    count = it.task.subTasks.size,
+                    key = {index -> it.task.subTasks[index].id}
+                ) { index ->
+                    HorizontalDivider()
+                    SubTaskItem(
+                        subTask = it.task.subTasks[index],
+                        onCheckedChange = { check ->
+                            viewModel.updateTask(it.task.copy(
+                                subTasks = it.task.subTasks.mapIndexed { i, subTask ->
+                                    if (i == index) {
+                                        subTask.copy(progress = if (check) subTask.requiredTime else 0)
+                                    } else {
+                                        subTask
+                                    }
+                                }
+                            ))
+                        },
+                        onNameChange = { name ->
+                            viewModel.updateTask(it.task.copy(subTasks = it.task.subTasks.mapIndexed { i, subTask ->
+                                if (i == index) {
+                                    subTask.copy(name = name)
+                                } else {
+                                    subTask
+                                }
+                            }))
+                        },
+                        onRequiredTimeSelected = { time ->
+                            viewModel.updateTask(it.task.copy(
+                                subTasks = it.task.subTasks.mapIndexed { i, subTask ->
+                                    if (i == index) {
+                                        subTask.copy(
+                                            requiredTime = time,
+                                            progress = subTask.progress.coerceAtMost(time)
+                                        )
+                                    } else {
+                                        subTask
+                                    }
+                                }
+                            ))
+                        },
+                        onProgressSelected = { time ->
+                            viewModel.updateTask(it.task.copy(
+                                subTasks = it.task.subTasks.mapIndexed { i, subTask ->
+                                    if (i == index) {
+                                        subTask.copy(
+                                            progress = time.coerceAtMost(subTask.requiredTime)
+                                        )
+                                    } else {
+                                        subTask
+                                    }
+                                }
+                            ))
+                        },
+                        onDelete = {
+                            viewModel.updateTask(it.task.copy(
+                                subTasks = it.task.subTasks.mapIndexedNotNull { i, subTask ->
+                                    if (i == index) {
+                                        null
+                                    } else {
+                                        subTask
+                                    }
+                                }
+                            ))
+                        }
+                    )
+                }
+            }
+        }
+        TextButton(
+            onClick = {
+                task?.let {
+                    val id = if (it.task.subTasks.isNotEmpty()) it.task.subTasks.maxOf { it.id } + 1 else 1
+                    viewModel.updateTask(it.task.copy(
+                        subTasks = it.task.subTasks.plus(SubTask(id = id))
+                    ))
+                }
+            }
+        ) {
+            Text("Add Subtask")
+        }
         Column(
             verticalArrangement = Arrangement.spacedBy(0.dp),
             modifier = Modifier
@@ -141,9 +235,6 @@ fun TaskScreen(
                 color = MaterialTheme.colorScheme.primary
             )
 
-            var importance by remember { mutableFloatStateOf((task?.task?.importance ?: 1).toFloat()) }
-            var urgency by remember { mutableFloatStateOf((task?.task?.urgency ?: 1).toFloat()) }
-            var progress by remember { mutableFloatStateOf((task?.task?.progress ?: 0).toFloat()) }
             Text("Importance")
             Slider(
                 value = importance,
@@ -172,19 +263,6 @@ fun TaskScreen(
                     }
                 )
             }
-            /*Text("Urgency")
-            Slider(
-                value = urgency,
-                onValueChange = { urgency = it },
-                onValueChangeFinished = {
-                    task?.let {
-                        Log.i("mytag", "unrgency changed")
-                        viewModel.updateTask(it.task.copy(urgency = urgency.toInt()))
-                    }
-                },
-                valueRange = 1f..10f,
-                steps = 8
-            )*/
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
