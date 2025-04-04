@@ -22,13 +22,21 @@ class DataStoreRepository @Inject constructor(
     val tasksOrderFlow: Flow<List<Long>> = context.dataStore.data
         .map { preferences ->
             preferences[tasksOrderKey]?.let { data ->
-                data.split(';').map { it.toLong() }
+                if (data == "") {
+                    emptyList()
+                } else {
+                    data.split(';').map { it.toLong() }
+                }
             } ?: emptyList()
         }
 
     suspend fun saveTasksOrder(list: List<Long>) {
         context.dataStore.edit { preferences ->
-            preferences[tasksOrderKey] = list.joinToString(";")
+            if (list.isEmpty()) {
+                preferences[tasksOrderKey] = ""
+            } else {
+                preferences[tasksOrderKey] = list.joinToString(";")
+            }
         }
     }
 }

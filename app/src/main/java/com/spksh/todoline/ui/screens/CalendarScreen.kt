@@ -68,6 +68,7 @@ import com.spksh.todoline.R
 import com.spksh.todoline.data.Tag.Tag
 import com.spksh.todoline.ui.MainViewModel
 import com.spksh.todoline.ui.components.ActivityItem
+import com.spksh.todoline.ui.components.LazyColumnDragAndDrop
 import com.spksh.todoline.ui.model.ActivityUiModel
 import com.spksh.todoline.ui.model.EventUiModel
 import com.spksh.todoline.ui.model.TaskUiModel
@@ -385,9 +386,42 @@ fun CalendarScreen(
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp)
                 )
-                LazyColumn {
-
-                }
+                LazyColumnDragAndDrop(
+                    tasks = uiState.settings.map {it.task.id.toInt()},
+                    onOrderChange = {viewModel.changeTasksOrder(it)}
+                )
+                /*LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items(uiState.settings) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors().copy(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .clickable {  }
+                                    .padding(8.dp)
+                                    .padding(horizontal = 8.dp)
+                                    .fillMaxSize()
+                            ) {
+                                Text(
+                                    text = it.task.name,
+                                    //maxLines = 1
+                                    color = MaterialTheme.colorScheme.onSurface
+                                    //modifier = Modifier.
+                                )
+                                it.deadlineText?.let {
+                                    Text(
+                                        text = it,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }*/
             }
         }
     }

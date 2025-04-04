@@ -59,12 +59,12 @@ class MainViewModel @Inject constructor(
             tasks = tasks.map { it.toUiModel() }.sortedBy {  it.deadlineLocal ?: if (it.task.urgency < 6) LocalDateTime.MAX else LocalDateTime.MIN },
             tags = tags,
             events = events.map { it.toUiModel() }.sortedBy { it.endTime }.sortedBy { it.startTime },
-            activities =  activities.map {it.toUiModel()}.sortedBy { it.endTime }.sortedBy { it.startTime },
-            timeSlots =  timeSlots.map {it.toUiModel()}.sortedBy { it.startTime },
+            activities = activities.map {it.toUiModel()}.sortedBy { it.endTime }.sortedBy { it.startTime },
+            timeSlots = timeSlots.map {it.toUiModel()}.sortedBy { it.startTime },
             settings = emptyList()
         )
     }.combine(dataStoreRepository.tasksOrderFlow) { state, settings ->
-        state.copy(settings = settings)
+        state.copy(settings = settings.mapNotNull { id -> state.tasks.find { it.task.id == id} })
     }  .stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5000),
@@ -86,7 +86,7 @@ class MainViewModel @Inject constructor(
             val events: List<EventUiModel>,
             val activities: List<ActivityUiModel>,
             val timeSlots: List<TimeSlotUiModel>,
-            val settings: List<Long>
+            val settings: List<TaskUiModel>
         ) : UiState() {
             val tasks_1 = tasks//.filter {it.task.progress != 1f }
                     .filter {it.task.importance >= 6 && it.task.urgency >= 6}.filterTags()
@@ -199,6 +199,7 @@ class MainViewModel @Inject constructor(
     fun addTask() {
         viewModelScope.launch {
             val id = taskRepository.insert(Task())
+            changeTasksOrder(uiState.value.settings.plus(TaskUiModel(task = Task(id = id))))
             openTaskScreen(id)
         }
     }
@@ -206,6 +207,7 @@ class MainViewModel @Inject constructor(
     fun addChildTask(parentTask: TaskUiModel) {
         viewModelScope.launch {
             val childId = taskRepository.insert(Task(parentTaskId = parentTask.task.id))
+            changeTasksOrder(uiState.value.settings.plus(TaskUiModel(task = Task(id = childId))))
             openTaskScreen(childId)
             taskRepository.update(
                 parentTask.task.copy(childTasksIds = parentTask.task.childTasksIds.plus(childId))
@@ -222,6 +224,7 @@ class MainViewModel @Inject constructor(
     fun deleteTask(taskUiModel: TaskUiModel) {
         viewModelScope.launch {
             taskRepository.delete(taskUiModel.task)
+            changeTasksOrder(uiState.value.settings.filter {it.task.id != taskUiModel.task.id})
         }
     }
 
@@ -337,6 +340,16 @@ class MainViewModel @Inject constructor(
 
     fun ChangeTasksWithoutTagsVisibility(show: Boolean) {
         _showTasksWithoutTags.value = show
+    }
+
+    fun calculateTasksOrder(list: List<TaskUiModel>) {
+        val newTasks = list.sortedBy {  it.deadlineLocal ?: if (it.task.urgency < 6) LocalDateTime.MAX else LocalDateTime.MIN }
+    }
+
+    fun changeTasksOrder(order: List<TaskUiModel>) {
+        viewModelScope.launch {
+            dataStoreRepository.saveTasksOrder(order.map {it.task.id})
+        }
     }
 
     private fun getFreeTime(
