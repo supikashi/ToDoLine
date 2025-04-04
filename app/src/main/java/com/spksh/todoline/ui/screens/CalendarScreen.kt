@@ -387,13 +387,13 @@ fun CalendarScreen(
                     modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp)
                 )
                 LazyColumnDragAndDrop(
-                    tasks = uiState.settings.map {it.task.id.toInt()},
-                    onOrderChange = {viewModel.changeTasksOrder(it)}
-                )
-                /*LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    items(uiState.settings) {
+                    tasks = uiState.settings,
+                    timeline = uiState.activities.filter { it.isTask },
+                    onOrderChange = {
+                        viewModel.changeTasksOrder(it)
+                        viewModel.calculateTimeline(tasklist = it)
+                    },
+                    item = { task, deadlineColor ->
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors().copy(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
@@ -406,22 +406,22 @@ fun CalendarScreen(
                                     .fillMaxSize()
                             ) {
                                 Text(
-                                    text = it.task.name,
+                                    text = task.task.name,
                                     //maxLines = 1
                                     color = MaterialTheme.colorScheme.onSurface
                                     //modifier = Modifier.
                                 )
-                                it.deadlineText?.let {
+                                task.deadlineText?.let {
                                     Text(
                                         text = it,
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = deadlineColor
                                     )
                                 }
                             }
                         }
                     }
-                }*/
+                )
             }
         }
     }

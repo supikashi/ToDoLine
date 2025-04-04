@@ -102,13 +102,6 @@ class MainViewModel @Inject constructor(
             val tasksAndEventsByDays = activities
                 .groupBy { it.startTimeLocal.toLocalDate() }
 
-            val tasksWithBadDeadline = activities
-                .asSequence()
-                .filter { it.isTask && !it.isDeadlineMet }
-                .map { it.activityId }.toSet().toList()
-                .mapNotNull { id -> tasks.find { it.task.id == id } }
-                .toList()
-
             private fun List<TaskUiModel>.filterTags() : List<TaskUiModel> {
                 return this.filter { task ->
                     (/*showTasksWithoutTags &&*/ task.task.tagsIds.isEmpty()) ||
@@ -576,6 +569,7 @@ class MainViewModel @Inject constructor(
             }
         }
         if (saveTimeline) {
+            changeTasksOrder(tasklist.filter { it.task.requiredTime != it.task.progress })
             viewModelScope.launch {
                 timeLinedActivityRepository.deleteAllTasks()
                 timeLinedActivityRepository.insertAll(

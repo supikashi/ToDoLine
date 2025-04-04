@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CardElevation
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,19 +35,25 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.spksh.todoline.data.Task.Task
+import com.spksh.todoline.ui.model.ActivityUiModel
 import com.spksh.todoline.ui.model.TaskUiModel
+import com.spksh.todoline.ui.theme.extendedDark
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 
 @Composable
 fun LazyColumnDragAndDrop(
-    tasks: List<Int>,
-    onOrderChange: (List<TaskUiModel>) -> Unit = {}
+    tasks: List<TaskUiModel>,
+    timeline: List<ActivityUiModel>,
+    onOrderChange: (List<TaskUiModel>) -> Unit = {},
+    item: @Composable (TaskUiModel, Color) -> Unit = {_,_->}
 ) {
     var list by remember { mutableStateOf(tasks) }
 
@@ -57,17 +64,21 @@ fun LazyColumnDragAndDrop(
         }
 
     LazyColumn(
-        modifier = Modifier.dragContainer(dragDropState),
+        modifier = Modifier.dragContainer(dragDropState, {onOrderChange(list)}),
         state = listState,
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        itemsIndexed(list, key = { _, item -> item }) { index, item ->
+        itemsIndexed(list, key = { _, item -> item.task.id }) { index, item ->
             DraggableItem(dragDropState, index) { isDragging ->
                 val elevation by animateDpAsState(if (isDragging) 4.dp else 1.dp)
-                Card(elevation = CardDefaults.cardElevation(defaultElevation = elevation)) {
-                    Text("Item $item", Modifier.fillMaxWidth().padding(20.dp))
-                }
+                item(
+                    item,
+                    if (timeline.find {it.activityId == item.task.id}?.isDeadlineMet != false) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        extendedDark.quadrant1.colorContainer
+                    })
             }
         }
     }
