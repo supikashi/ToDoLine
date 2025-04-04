@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.spksh.todoline.data.Task.TaskDao
 import com.spksh.todoline.data.AppDatabase
+import com.spksh.todoline.data.DataStoreRepository
 import com.spksh.todoline.data.Event.EventDao
 import com.spksh.todoline.data.Tag.TagDao
 import com.spksh.todoline.data.TimeLinedActivity.TimeLinedActivityDao

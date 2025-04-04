@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.spksh.todoline.data.DataStoreRepository
 import com.spksh.todoline.data.Event.Event
 import com.spksh.todoline.data.Event.EventRepository
 import com.spksh.todoline.data.TimeSlot.TimeSlotRepository
@@ -41,7 +42,7 @@ class MainViewModel @Inject constructor(
     private val eventRepository: EventRepository,
     private val timeLinedActivityRepository: TimeLinedActivityRepository,
     private val timeSlotRepository: TimeSlotRepository,
-    //private val dataStoreRepository: DataStoreRepository
+    private val dataStoreRepository: DataStoreRepository
 ) : ViewModel() {
 
     private val _navigationEvents = MutableSharedFlow<NavigationEvent>()
@@ -55,13 +56,16 @@ class MainViewModel @Inject constructor(
         timeSlotRepository.allItemsFlow
     ) { tasks, tags, events, activities, timeSlots ->
         UiState.State(
-            tasks.map { it.toUiModel() }.sortedBy {  it.deadlineLocal ?: if (it.task.urgency < 6) LocalDateTime.MAX else LocalDateTime.MIN },
-            tags,
-            events.map { it.toUiModel() }.sortedBy { it.endTime }.sortedBy { it.startTime },
-            activities.map {it.toUiModel()}.sortedBy { it.endTime }.sortedBy { it.startTime },
-            timeSlots.map {it.toUiModel()}.sortedBy { it.startTime },
+            tasks = tasks.map { it.toUiModel() }.sortedBy {  it.deadlineLocal ?: if (it.task.urgency < 6) LocalDateTime.MAX else LocalDateTime.MIN },
+            tags = tags,
+            events = events.map { it.toUiModel() }.sortedBy { it.endTime }.sortedBy { it.startTime },
+            activities =  activities.map {it.toUiModel()}.sortedBy { it.endTime }.sortedBy { it.startTime },
+            timeSlots =  timeSlots.map {it.toUiModel()}.sortedBy { it.startTime },
+            settings = emptyList()
         )
-    }.stateIn(
+    }.combine(dataStoreRepository.tasksOrderFlow) { state, settings ->
+        state.copy(settings = settings)
+    }  .stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5000),
         UiState.State(
@@ -70,6 +74,7 @@ class MainViewModel @Inject constructor(
             emptyList(),
             emptyList(),
             emptyList(),
+            emptyList()
         )
     )
 
@@ -80,7 +85,8 @@ class MainViewModel @Inject constructor(
             val tags: List<Tag>,
             val events: List<EventUiModel>,
             val activities: List<ActivityUiModel>,
-            val timeSlots: List<TimeSlotUiModel>
+            val timeSlots: List<TimeSlotUiModel>,
+            val settings: List<Long>
         ) : UiState() {
             val tasks_1 = tasks//.filter {it.task.progress != 1f }
                     .filter {it.task.importance >= 6 && it.task.urgency >= 6}.filterTags()

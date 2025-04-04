@@ -1,8 +1,11 @@
 package com.spksh.todoline.ui.screens
 
-import android.widget.CheckBox
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,12 +17,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -30,11 +35,14 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Shapes
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -53,9 +61,6 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -63,8 +68,6 @@ import com.spksh.todoline.R
 import com.spksh.todoline.data.Tag.Tag
 import com.spksh.todoline.ui.MainViewModel
 import com.spksh.todoline.ui.components.ActivityItem
-import com.spksh.todoline.ui.components.EventActivityItem
-import com.spksh.todoline.ui.components.TaskItem
 import com.spksh.todoline.ui.model.ActivityUiModel
 import com.spksh.todoline.ui.model.EventUiModel
 import com.spksh.todoline.ui.model.TaskUiModel
@@ -77,18 +80,23 @@ import java.time.format.DateTimeFormatter
 import kotlin.math.max
 import kotlin.math.min
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun CalendarScreen(
     viewModel: MainViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var isTimeLine by rememberSaveable { mutableStateOf(true) }
-    var openBottomSheet by rememberSaveable { mutableStateOf(false) }
+    var openOverdueBottomSheet by rememberSaveable { mutableStateOf(false) }
+    var openCustomTaskOrderBottomSheet by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val bottomSheetState =
+    val overdueBottomSheetState =
+        rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val customTaskOrderBottomSheetState =
         rememberModalBottomSheetState(skipPartiallyExpanded = false)
     val tasksWithBadDeadline = remember { mutableStateListOf<TaskUiModel>() }
+
+    val interactionSource = remember { MutableInteractionSource() }
     Box {
         Column {
             Row(
@@ -207,18 +215,31 @@ fun CalendarScreen(
                 .padding(end = 16.dp)
                 .align(Alignment.BottomEnd)
         ) {
-            FloatingActionButton(
-                onClick = {
-                    scope.launch {
-                        tasksWithBadDeadline.clear()
-                        tasksWithBadDeadline.addAll(viewModel.calculateTimeline(uiState.tasks))
-                        if (tasksWithBadDeadline.isNotEmpty()) {
-                            openBottomSheet = true
+            Surface(
+                shape = FloatingActionButtonDefaults.shape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.size(56.dp).combinedClickable(
+                    interactionSource = interactionSource,
+                    indication = LocalIndication.current,
+                    onLongClick = {
+                        openCustomTaskOrderBottomSheet = true
+                    },
+                    onClick = {
+                        scope.launch {
+                            tasksWithBadDeadline.clear()
+                            tasksWithBadDeadline.addAll(viewModel.calculateTimeline(uiState.tasks))
+                            if (tasksWithBadDeadline.isNotEmpty()) {
+                                openOverdueBottomSheet = true
+                            }
                         }
                     }
-                },
+                )
             ) {
-                Icon(imageVector = Icons.Filled.Refresh, contentDescription = null)
+                Icon(
+                    imageVector = Icons.Filled.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.padding(16.dp)
+                )
             }
             Spacer(Modifier.height(16.dp))
             FloatingActionButton(
@@ -228,25 +249,44 @@ fun CalendarScreen(
             }
         }
     }
-    if (openBottomSheet) {
+    if (openOverdueBottomSheet) {
         ModalBottomSheet(
-            onDismissRequest = { openBottomSheet = false },
-            sheetState = bottomSheetState,
+            onDismissRequest = { openOverdueBottomSheet = false },
+            sheetState = overdueBottomSheetState,
         ) {
             Column(
                 modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth()
             ) {
-                Button(
-                    onClick = {
-                        scope.launch {
-                            tasksWithBadDeadline.clear()
-                            tasksWithBadDeadline.addAll(viewModel.calculateTimelineByImportance())
-                            openBottomSheet = tasksWithBadDeadline.isNotEmpty()
-                        }
-                    },
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(text = "Optimize Important Tasks")
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                tasksWithBadDeadline.clear()
+                                tasksWithBadDeadline.addAll(viewModel.calculateTimelineByImportance())
+                                openOverdueBottomSheet = tasksWithBadDeadline.isNotEmpty()
+                            }
+                        },
+                    ) {
+                        Text(text = "Promote Important Tasks")
+                    }
+                    Button(
+                        onClick = {
+                            scope
+                                .launch { overdueBottomSheetState.hide() }
+                                .invokeOnCompletion {
+                                    if (!overdueBottomSheetState.isVisible) {
+                                        openOverdueBottomSheet = false
+                                    }
+                                }
+                            openCustomTaskOrderBottomSheet = true
+                        },
+                    ) {
+                        Text(text = "Set Custom Order")
+                    }
+
                 }
                 Text(
                     text = "Potentially Overdue Tasks",
@@ -326,6 +366,27 @@ fun CalendarScreen(
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+
+    if (openCustomTaskOrderBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = {openCustomTaskOrderBottomSheet = false},
+            sheetState = customTaskOrderBottomSheetState
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth()
+            ) {
+                Text(
+                    text = "Order Of Tasks",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp)
+                )
+                LazyColumn {
+
                 }
             }
         }

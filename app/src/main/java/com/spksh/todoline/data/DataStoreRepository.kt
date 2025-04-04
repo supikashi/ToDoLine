@@ -1,23 +1,34 @@
 package com.spksh.todoline.data
 
+import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import javax.inject.Inject
 
-class DataStoreRepository(private val dataStore: DataStore<Preferences>) {
+class DataStoreRepository @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
 
-    /*private val TAGS_LIST_KEY = stringPreferencesKey("tags_list")
+    private val Context.dataStore by preferencesDataStore(name = "settings")
 
-    val tagsList: Flow<List<String>> = dataStore.data.map { preferences ->
-        preferences[TAGS_LIST_KEY]?.split(";") ?: emptyList()
-    }
+    private val tasksOrderKey = stringPreferencesKey("tasks_order")
 
-    suspend fun saveList(list: List<String>) {
-        dataStore.edit { preferences ->
-            preferences[TAGS_LIST_KEY] = list.joinToString(";")
+    val tasksOrderFlow: Flow<List<Long>> = context.dataStore.data
+        .map { preferences ->
+            preferences[tasksOrderKey]?.let { data ->
+                data.split(';').map { it.toLong() }
+            } ?: emptyList()
         }
-    }*/
+
+    suspend fun saveTasksOrder(list: List<Long>) {
+        context.dataStore.edit { preferences ->
+            preferences[tasksOrderKey] = list.joinToString(";")
+        }
+    }
 }
