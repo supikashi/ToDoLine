@@ -17,10 +17,10 @@ import com.spksh.todoline.data.TimeLinedActivity.TimeLinedActivityRepository
 import com.spksh.todoline.data.TimeSlot.TimeSlot
 import com.spksh.todoline.ui.model.ActivityUiModel
 import com.spksh.todoline.ui.model.EventUiModel
+import com.spksh.todoline.ui.model.Statistics
 import com.spksh.todoline.ui.model.TaskUiModel
 import com.spksh.todoline.ui.model.TimeSlotUiModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -154,6 +155,12 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun openStatisticsScreen() {
+        viewModelScope.launch {
+            _navigationEvents.emit(NavigationEvent.NavigateToSettings.StatisticsScreen)
+        }
+    }
+
     fun openTimeSlotScreen(id: Long) {
         viewModelScope.launch {
             _navigationEvents.emit(NavigationEvent.NavigateToSettings.TimeSlotScreen(id.toString()))
@@ -169,6 +176,7 @@ class MainViewModel @Inject constructor(
             object Root : NavigateToSettings()
             //object MainScreen : NavigateToSettings()
             object ScheduleScreen : NavigateToSettings()
+            object StatisticsScreen : NavigateToSettings()
             data class TimeSlotScreen(val id: String) : NavigateToSettings()
         }
         object NavigateBack : NavigationEvent()
@@ -210,7 +218,24 @@ class MainViewModel @Inject constructor(
 
     fun updateTask(task: Task) {
         viewModelScope.launch {
-            taskRepository.update(task)
+            val oldTask = uiState.value.tasks.find { task.id == it.task.id }
+            var newProgressDates = task.progressDates
+            oldTask?.let {
+                if (task.progress != it.task.progress) {
+                    val newProgress = task.progress - it.task.progressDates.sumOf { it.second }
+                    if (newProgress > 0) {
+                        newProgressDates = newProgressDates.plus(
+                            Pair(
+                                LocalDateTime.now()
+                                    .atZone(zoneId)
+                                    .toInstant()
+                                    .toEpochMilli(),
+                                newProgress)
+                        )
+                    }
+                }
+            }
+            taskRepository.update(task.copy(progressDates = newProgressDates))
         }
     }
 
@@ -622,7 +647,7 @@ class MainViewModel @Inject constructor(
         return calculateTimeline(tasks, true)
     }
 
-    private fun getActivitiesByEvent(event: EventUiModel) : List<TimeLinedActivity>{
+    private fun getActivitiesByEvent(event: EventUiModel) : List<TimeLinedActivity> {
         val list = mutableListOf<TimeLinedActivity>()
         var eventStart = Instant.ofEpochMilli(event.startTime).atZone(zoneId).toLocalDateTime()
         val startDate = eventStart.toLocalDate()
@@ -674,6 +699,85 @@ class MainViewModel @Inject constructor(
         return list
     }
 
+    fun getStatistics(startDate: LocalDate, endDate: LocalDate) : Statistics {
+        var totalTasksDone = 0
+        var totalQuadrant1TasksDone = 0
+        var totalQuadrant2TasksDone = 0
+        var totalQuadrant3TasksDone = 0
+        var totalQuadrant4TasksDone = 0
+        val tagsTotalTasksDone: MutableMap<Long, Int> = mutableMapOf()
+        uiState.value.tags.forEach {
+            tagsTotalTasksDone[it.id] = 0
+        }
+
+        uiState.value.tasks
+            .filter { it.task.progress == it.task.requiredTime }
+            .filter { it.progressDatesLocal.last().first.toLocalDate().between(startDate, endDate) }
+            .forEach {
+                totalTasksDone++
+                if (it.task.importance >= 6 && it.task.urgency >= 6) {
+                    totalQuadrant1TasksDone++
+                } else if (it.task.importance >= 6 && it.task.urgency <= 5) {
+                    totalQuadrant2TasksDone++
+                } else if (it.task.importance <= 5 && it.task.urgency >= 6) {
+                    totalQuadrant3TasksDone++
+                } else {
+                    totalQuadrant4TasksDone++
+                }
+                it.task.tagsIds.forEach {
+                    tagsTotalTasksDone[it] = tagsTotalTasksDone[it]?.plus(1) ?: 1
+                }
+            }
+
+        var totalProgressMinutes = 0
+        var totalQuadrant1ProgressMinutes = 0
+        var totalQuadrant2ProgressMinutes = 0
+        var totalQuadrant3ProgressMinutes = 0
+        var totalQuadrant4ProgressMinutes = 0
+        val tagsTotalProgressMinutes: MutableMap<Long, Int> = mutableMapOf()
+        uiState.value.tags.forEach {
+            tagsTotalProgressMinutes[it.id] = 0
+        }
+
+        uiState.value.tasks.forEach { task ->
+            task.progressDatesLocal.forEach { progress ->
+                if (progress.first.toLocalDate().between(startDate, endDate)) {
+                    totalProgressMinutes += progress.second
+                    if (task.task.importance >= 6 && task.task.urgency >= 6) {
+                        totalQuadrant1ProgressMinutes += progress.second
+                    } else if (task.task.importance >= 6 && task.task.urgency <= 5) {
+                        totalQuadrant2ProgressMinutes += progress.second
+                    } else if (task.task.importance <= 5 && task.task.urgency >= 6) {
+                        totalQuadrant3ProgressMinutes += progress.second
+                    } else {
+                        totalQuadrant4ProgressMinutes += progress.second
+                    }
+                    task.task.tagsIds.forEach {
+                        tagsTotalProgressMinutes[it] = tagsTotalProgressMinutes[it]?.plus(progress.second) ?: progress.second
+                    }
+                }
+            }
+        }
+        return Statistics(
+            totalTasksDone = totalTasksDone,
+            totalProgressMinutes = totalProgressMinutes,
+            totalQuadrant1TasksDone = totalQuadrant1TasksDone,
+            totalQuadrant2TasksDone = totalQuadrant2TasksDone,
+            totalQuadrant3TasksDone = totalQuadrant3TasksDone,
+            totalQuadrant4TasksDone = totalQuadrant4TasksDone,
+            totalQuadrant1ProgressMinutes = totalQuadrant1ProgressMinutes,
+            totalQuadrant2ProgressMinutes = totalQuadrant2ProgressMinutes,
+            totalQuadrant3ProgressMinutes = totalQuadrant3ProgressMinutes,
+            totalQuadrant4ProgressMinutes = totalQuadrant4ProgressMinutes,
+            tagsTotalTasksDone = tagsTotalTasksDone.toList(),
+            tagsTotalProgressMinutes = tagsTotalProgressMinutes.toList()
+        )
+    }
+
+    private fun LocalDate.between(startDate: LocalDate, endDate: LocalDate) : Boolean {
+        return (startDate.isAfter(this) || endDate.isBefore(this)).not()
+    }
+
     private fun Task.toUiModel(): TaskUiModel {
         val deadlineLocal = this.deadline?.let {
             Instant.ofEpochMilli(it)
@@ -681,7 +785,10 @@ class MainViewModel @Inject constructor(
                 .toLocalDateTime()
         }
         val deadlineText = deadlineLocal?.format(DateTimeFormatter.ofPattern("MMM d yyyy H:mm"))
-        return TaskUiModel(this, deadlineLocal, deadlineText)
+        val progressDatesLocal = this.progressDates.map {
+            Pair(Instant.ofEpochMilli(it.first).atZone(zoneId).toLocalDateTime(), it.second)
+        }
+        return TaskUiModel(this, deadlineLocal, deadlineText, progressDatesLocal)
     }
 
     private fun Event.toUiModel(): EventUiModel {

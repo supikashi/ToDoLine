@@ -41,6 +41,7 @@ import com.spksh.todoline.ui.screens.EventScreen
 import com.spksh.todoline.ui.screens.MatrixScreen
 import com.spksh.todoline.ui.screens.ScheduleSettingsScreen
 import com.spksh.todoline.ui.screens.MainSettingsScreen
+import com.spksh.todoline.ui.screens.StatisticsScreen
 import com.spksh.todoline.ui.screens.TaskScreen
 import com.spksh.todoline.ui.screens.TimeSlotScreen
 import com.spksh.todoline.ui.theme.AppTheme
@@ -84,6 +85,9 @@ fun ToDoLineApp(
                 }
                 MainViewModel.NavigationEvent.NavigateToSettings.ScheduleScreen -> {
                     navController.navigate("schedule")
+                }
+                MainViewModel.NavigationEvent.NavigateToSettings.StatisticsScreen -> {
+                    navController.navigate("statistics")
                 }
                 MainViewModel.NavigationEvent.NavigateBack -> {
                     navController.popBackStack()
@@ -162,6 +166,11 @@ fun ToDoLineApp(
                     }
                     composable("schedule") {
                         ScheduleSettingsScreen(
+                            viewModel = mainViewModel
+                        )
+                    }
+                    composable("statistics") {
+                        StatisticsScreen(
                             viewModel = mainViewModel
                         )
                     }

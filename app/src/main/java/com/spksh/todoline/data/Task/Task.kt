@@ -17,4 +17,5 @@ data class Task(
     val childTasksIds: List<Long> = emptyList(),
     val subTasks: List<SubTask> = emptyList(),
     val progress: Int = 0,
+    val progressDates: List<Pair<Long, Int>> = emptyList()
 )

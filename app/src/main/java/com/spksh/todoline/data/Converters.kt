@@ -34,10 +34,19 @@ class Converters {
 
     @TypeConverter
     fun toListOfSubTasks(data: String): List<SubTask> {
-        /*return if (data.isEmpty())
-            emptyList()
-        else
-            Json.decodeFromString<List<SubTask>>(data)*/
         return Json.decodeFromString<List<SubTask>>(data)
+    }
+
+    @TypeConverter
+    fun fromListOfProgressDates(list: List<Pair<Long, Int>>) : String {
+        return list.map {"${it.first},${it.second}"}.joinToString(";")
+    }
+
+    @TypeConverter
+    fun toListOfSubProgressDates(data: String): List<Pair<Long, Int>> {
+        return if (data.isEmpty()) emptyList() else data.split(';').map {
+            val split = it.split(',')
+            Pair(split[0].toLong(), split[1].toInt())
+        }
     }
 }
