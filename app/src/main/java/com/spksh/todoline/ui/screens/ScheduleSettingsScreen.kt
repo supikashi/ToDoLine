@@ -48,7 +48,7 @@ fun ScheduleSettingsScreen(
                 modifier = Modifier.padding(bottom = 8.dp, start = 8.dp)
             ) {
                 Text(
-                    text = "Schedule Settings",
+                    text = stringResource(R.string.schedule_settings),
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.headlineSmall
                 )
@@ -66,10 +66,13 @@ fun ScheduleSettingsScreen(
                 timeSlots = uiState.timeSlots,
                 tags = uiState.tags,
             )
-            val days = listOf("M", "T", "W", "T", "F", "S", "S")
+            val days = listOf(stringResource(R.string.m),
+                stringResource(R.string.t), stringResource(R.string.w),
+                stringResource(R.string.thursday), stringResource(R.string.f),
+                stringResource(R.string.saturday), stringResource(R.string.sunday)
+            )
             Row(
                 modifier = Modifier
-
             ) {
                 days.forEachIndexed { index, day ->
                     InputChip(
@@ -86,7 +89,13 @@ fun ScheduleSettingsScreen(
                     )
                 }
             }
-            val week = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+            val week = listOf(stringResource(R.string.monday_full),
+                stringResource(R.string.tuesday_full),
+                stringResource(R.string.wednesday_full),
+                stringResource(R.string.thursday_full),
+                stringResource(R.string.friday_full),
+                stringResource(R.string.saturday_full), stringResource(R.string.sunday_full)
+            )
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -105,12 +114,12 @@ fun ScheduleSettingsScreen(
             }
         }
         FloatingActionButton(
-            onClick = { viewModel.addTimeSlot(TimeSlotUiModel()) },
+            onClick = { viewModel.timeSlotFeatures.add(TimeSlotUiModel(startTime = 540, endTime = 600)) },
             modifier = Modifier
                 .padding(16.dp)
                 .align(Alignment.BottomEnd)
         ) {
-            Icon(imageVector = Icons.Filled.Add, contentDescription = "Add Time Slot")
+            Icon(imageVector = Icons.Filled.Add, contentDescription = null)
         }
     }
 }

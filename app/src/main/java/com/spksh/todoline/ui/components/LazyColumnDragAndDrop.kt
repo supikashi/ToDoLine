@@ -69,12 +69,12 @@ fun LazyColumnDragAndDrop(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        itemsIndexed(list, key = { _, item -> item.task.id }) { index, item ->
+        itemsIndexed(list, key = { _, item -> item.id }) { index, item ->
             DraggableItem(dragDropState, index) { isDragging ->
                 val elevation by animateDpAsState(if (isDragging) 4.dp else 1.dp)
                 item(
                     item,
-                    if (timeline.find {it.activityId == item.task.id}?.isDeadlineMet != false) {
+                    if (timeline.find {it.activityId == item.id}?.isDeadlineMet != false) {
                         MaterialTheme.colorScheme.onSurfaceVariant
                     } else {
                         extendedDark.quadrant1.colorContainer

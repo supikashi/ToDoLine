@@ -127,14 +127,14 @@ fun TaskActivityItem(
 ) {
     var color: Color? = null
     task?.let {
-        if (it.task.importance > 5) {
-            if (it.task.urgency > 5) {
+        if (it.importance > 5) {
+            if (it.urgency > 5) {
                 color = extendedDark.quadrant1.colorContainer
             } else {
                 color = extendedDark.quadrant2.colorContainer
             }
         } else {
-            if (it.task.urgency > 5) {
+            if (it.urgency > 5) {
                 color = extendedDark.quadrant3.colorContainer
             } else {
                 color = extendedDark.quadrant4.colorContainer
@@ -172,15 +172,15 @@ fun TaskActivityItem(
                 }
                 val name = task?.let {
                     if (activity.subtaskId == 0L) {
-                        it.task.name
+                        it.name
                     } else {
-                        it.task.subTasks.find { it.id == activity.subtaskId }?.name
+                        it.subTasks.find { it.id == activity.subtaskId }?.name
                     }
                 } ?: ""
                 Text(text = name + dayText)
                 if (activity.subtaskId != 0L) {
                     Text(
-                        text = "Subtask of: ${task?.task?.name}",
+                        text = "Subtask of: ${task?.name}",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

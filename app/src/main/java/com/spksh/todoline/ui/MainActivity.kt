@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -65,6 +66,7 @@ fun ToDoLineApp(
     mainViewModel: MainViewModel = viewModel(),
     navController: NavHostController = rememberNavController()
 ) {
+    val uiState by mainViewModel.uiState.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) {
         mainViewModel.navigationEvents.collect { event ->
             when (event) {
@@ -100,7 +102,9 @@ fun ToDoLineApp(
     }
     Log.i("mytag", "app recomp")
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    AppTheme {
+    AppTheme(
+        darkTheme = uiState.settings.isDarkTheme
+    ) {
         Scaffold(
             bottomBar = {
                 BottomBar(

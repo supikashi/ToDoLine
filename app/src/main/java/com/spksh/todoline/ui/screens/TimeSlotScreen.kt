@@ -1,6 +1,7 @@
 package com.spksh.todoline.ui.screens
 
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +37,7 @@ import androidx.compose.material3.TimeInput
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -43,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -58,12 +61,17 @@ fun TimeSlotScreen(
     viewModel: MainViewModel = viewModel(),
 ) {
     Log.i("mytag", "timeslot screen")
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val timeSlot = uiState.timeSlots.find { it.id == id }
     val tag = viewModel.findTagById(timeSlot?.tagId ?: 0)
     Log.i("mytag", timeSlot.toString())
     var expandedMoreOptionsMenu by remember { mutableStateOf(false) }
     var expandedTagMenu by remember { mutableStateOf(false) }
+    val daysOfWeek = remember { timeSlot?.daysOfWeek?.let {
+        mutableStateListOf(it[0], it[1], it[2], it[3], it[4], it[5], it[6])
+    } ?: mutableStateListOf() }
+
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -90,7 +98,7 @@ fun TimeSlotScreen(
                         onClick = {
                             viewModel.popBackStack()
                             timeSlot?.let {
-                                viewModel.deleteTimeSlot(it)
+                                viewModel.timeSlotFeatures.delete(it)
                             }
                         }
                     )
@@ -111,10 +119,11 @@ fun TimeSlotScreen(
                     modifier = Modifier
                         .padding(horizontal = 8.dp)
                         .weight(1f),
-                    selected = timeSlot?.daysOfWeek?.get(index) ?: true,
+                    selected = daysOfWeek[index],
                     onClick = {
                         timeSlot?.let {
-                            viewModel.updateTimeSlot(it.copy(daysOfWeek = it.daysOfWeek.mapIndexed { i, b -> if (i == index) !b else b}))
+                            daysOfWeek[index] = !daysOfWeek[index]
+                            //viewModel.timeSlotFeatures.update(it.copy(daysOfWeek = it.daysOfWeek.mapIndexed { i, b -> if (i == index) !b else b}))
                         }
                     },
                     label = {
@@ -184,7 +193,7 @@ fun TimeSlotScreen(
                             }},
                             onClick = {
                                 timeSlot?.let {
-                                    viewModel.updateTimeSlot(it.copy(tagId = 0))
+                                    viewModel.timeSlotFeatures.update(it.copy(tagId = 0))
                                 }
                                 expandedTagMenu = false
                             }
@@ -205,7 +214,7 @@ fun TimeSlotScreen(
                                 },
                                 onClick = {
                                     timeSlot?.let {
-                                        viewModel.updateTimeSlot(it.copy(tagId = tag.id))
+                                        viewModel.timeSlotFeatures.update(it.copy(tagId = tag.id))
                                     }
                                     expandedTagMenu = false
                                 }
@@ -242,10 +251,28 @@ fun TimeSlotScreen(
             }
             Button(onClick = {
                 timeSlot?.let {
-                    viewModel.updateTimeSlot(it.copy(
+                    val newTimeSlot = it.copy(
                         startTime = startTimeState.hour * 60 + startTimeState.minute,
-                        endTime = endTimeState.hour * 60 + endTimeState.minute
-                    ))
+                        endTime = endTimeState.hour * 60 + endTimeState.minute,
+                        daysOfWeek = daysOfWeek
+                    )
+                    if (newTimeSlot.startTime <= newTimeSlot.endTime) {
+                        if (viewModel.timeSlotFeatures.check(newTimeSlot)) {
+                            viewModel.timeSlotFeatures.update(newTimeSlot)
+                        } else {
+                            Toast.makeText(
+                                context,
+                                "Time Slots Overlap",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    } else {
+                        Toast.makeText(
+                            context,
+                            "Bad End Time",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
             }) {
                 Text(text = "Save")

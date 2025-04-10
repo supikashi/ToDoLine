@@ -31,7 +31,7 @@ fun ChildTasksPicker(
     ) {
         Text(
             if (childTasksIds.isEmpty())
-                "Create Child Tasks"
+                "Create Dependent Tasks"
             else
                 "${childTasksIds.size} Child Tasks"
         )
@@ -52,13 +52,13 @@ fun ChildTasksPicker(
                             Text("Create New")
                         }
                     }
-                    items(tasks.filter { it.task.id in childTasksIds }) { task ->
+                    items(tasks.filter { it.id in childTasksIds }) { task ->
                         TaskItem(
                             task = task,
                             onCheckBox = {onCheckBox(task, it)},
                             onTaskClick = {
                                 showDialog = false
-                                onTaskClick(task.task.id)
+                                onTaskClick(task.id)
                             },
                         )
                     }

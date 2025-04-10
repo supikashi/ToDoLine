@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.viewModelFactory
 import com.spksh.todoline.data.DataStoreRepository
 import com.spksh.todoline.data.Event.Event
 import com.spksh.todoline.data.Event.EventRepository
@@ -11,6 +12,7 @@ import com.spksh.todoline.data.TimeSlot.TimeSlotRepository
 import com.spksh.todoline.data.Tag.Tag
 import com.spksh.todoline.data.Task.Task
 import com.spksh.todoline.data.Tag.TagRepository
+import com.spksh.todoline.data.Task.SubTask
 import com.spksh.todoline.data.Task.TaskRepository
 import com.spksh.todoline.data.TimeLinedActivity.TimeLinedActivity
 import com.spksh.todoline.data.TimeLinedActivity.TimeLinedActivityRepository
@@ -38,79 +40,57 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    private val taskRepository: TaskRepository,
-    private val tagRepository: TagRepository,
-    private val eventRepository: EventRepository,
-    private val timeLinedActivityRepository: TimeLinedActivityRepository,
-    private val timeSlotRepository: TimeSlotRepository,
-    private val dataStoreRepository: DataStoreRepository
+    private val taskFeaturesFactory: TaskFeatures.Factory,
+    private val tagFeaturesFactory: TagFeatures.Factory,
+    private val eventFeaturesFactory: EventFeatures.Factory,
+    private val timelinedActivityFeaturesFactory: TimelinedActivityFeatures.Factory,
+    private val timeSlotFeaturesFactory: TimeSlotFeatures.Factory,
+    private val timelineFeaturesFactory: TimelineFeatures.Factory,
+    private val statisticsFeaturesFactory: StatisticsFeatures.Factory,
+    private val settingsFeaturesFactory: SettingsFeatures.Factory,
+    private val uiStateFlowFactory: UiStateFlow.Factory
 ) : ViewModel() {
 
     private val _navigationEvents = MutableSharedFlow<NavigationEvent>()
     val navigationEvents = _navigationEvents.asSharedFlow()
 
-    val uiState = combine(
-        taskRepository.allItemsFlow,
-        tagRepository.allItemsFlow,
-        eventRepository.allItemsFlow,
-        timeLinedActivityRepository.allItemsFlow,
-        timeSlotRepository.allItemsFlow
-    ) { tasks, tags, events, activities, timeSlots ->
-        UiState.State(
-            tasks = tasks.map { it.toUiModel() }.sortedBy {  it.deadlineLocal ?: if (it.task.urgency < 6) LocalDateTime.MAX else LocalDateTime.MIN },
-            tags = tags,
-            events = events.map { it.toUiModel() }.sortedBy { it.endTime }.sortedBy { it.startTime },
-            activities = activities.map {it.toUiModel()}.sortedBy { it.endTime }.sortedBy { it.startTime },
-            timeSlots = timeSlots.map {it.toUiModel()}.sortedBy { it.startTime },
-            settings = emptyList()
-        )
-    }.combine(dataStoreRepository.tasksOrderFlow) { state, settings ->
-        state.copy(settings = settings.mapNotNull { id -> state.tasks.find { it.task.id == id} })
-    }  .stateIn(
-        viewModelScope,
-        SharingStarted.WhileSubscribed(5000),
-        UiState.State(
-            emptyList(),
-            emptyList(),
-            emptyList(),
-            emptyList(),
-            emptyList(),
-            emptyList()
-        )
-    )
+    private val uiStateFlow by lazy {
+        uiStateFlowFactory.create(zoneId, viewModelScope)
+    }
 
-    sealed class UiState {
-        //object Loading : UiState()
-        data class State(
-            val tasks: List<TaskUiModel>,
-            val tags: List<Tag>,
-            val events: List<EventUiModel>,
-            val activities: List<ActivityUiModel>,
-            val timeSlots: List<TimeSlotUiModel>,
-            val settings: List<TaskUiModel>
-        ) : UiState() {
-            val tasks_1 = tasks//.filter {it.task.progress != 1f }
-                    .filter {it.task.importance >= 6 && it.task.urgency >= 6}.filterTags()
-            val tasks_2 = tasks//.filter {it.task.progress != 1f }
-                    .filter {it.task.importance >= 6 && it.task.urgency <= 5}.filterTags()
-            val tasks_3 = tasks//.filter {it.task.progress != 1f }
-                    .filter {it.task.importance <= 5 && it.task.urgency >= 6}.filterTags()
-            val tasks_4 = tasks//.filter {it.task.progress != 1f }
-                    .filter {it.task.importance <= 5 && it.task.urgency <= 5}.filterTags()
+    val uiState by lazy {
+        uiStateFlow.uiState
+    }
 
-            val currentTime: LocalDateTime = LocalDateTime.now().withSecond(0).withNano(0)
+    val taskFeatures by lazy {
+        taskFeaturesFactory.create(viewModelScope, uiState, _navigationEvents, zoneId)
+    }
+    val tagFeatures by lazy {
+        tagFeaturesFactory.create(viewModelScope)
+    }
 
-            val tasksAndEventsByDays = activities
-                .groupBy { it.startTimeLocal.toLocalDate() }
+    val eventFeatures by lazy {
+        eventFeaturesFactory.create(viewModelScope, uiState, _navigationEvents, zoneId)
+    }
 
-            private fun List<TaskUiModel>.filterTags() : List<TaskUiModel> {
-                return this.filter { task ->
-                    (/*showTasksWithoutTags &&*/ task.task.tagsIds.isEmpty()) ||
-                            tags.any { it.show && (it.id in task.task.tagsIds) }
-                }
-            }
-        }
-        //data class Error(val message: String?) : UiState()
+    val timelinedActivityFeatures by lazy {
+        timelinedActivityFeaturesFactory.create(viewModelScope, zoneId)
+    }
+
+    val timeSlotFeatures by lazy {
+        timeSlotFeaturesFactory.create(viewModelScope, uiState, _navigationEvents)
+    }
+
+    val timelineFeatures by lazy {
+        timelineFeaturesFactory.create(viewModelScope, zoneId, uiState)
+    }
+
+    val statisticsFeatures by lazy {
+        statisticsFeaturesFactory.create(viewModelScope, uiState)
+    }
+
+    val settingsFeatures by lazy {
+        settingsFeaturesFactory.create(viewModelScope)
     }
 
     fun openTaskScreen(id: Long) {
@@ -194,56 +174,7 @@ class MainViewModel @Inject constructor(
 
     fun findTaskById(id: Long): TaskUiModel? {
         Log.i("mytag", "find")
-        return uiState.value.tasks.find {it.task.id == id}
-    }
-
-    fun addTask() {
-        viewModelScope.launch {
-            val id = taskRepository.insert(Task())
-            changeTasksOrder(uiState.value.settings.plus(TaskUiModel(task = Task(id = id))))
-            openTaskScreen(id)
-        }
-    }
-
-    fun addChildTask(parentTask: TaskUiModel) {
-        viewModelScope.launch {
-            val childId = taskRepository.insert(Task(parentTaskId = parentTask.task.id))
-            changeTasksOrder(uiState.value.settings.plus(TaskUiModel(task = Task(id = childId))))
-            openTaskScreen(childId)
-            taskRepository.update(
-                parentTask.task.copy(childTasksIds = parentTask.task.childTasksIds.plus(childId))
-            )
-        }
-    }
-
-    fun updateTask(task: Task) {
-        viewModelScope.launch {
-            val oldTask = uiState.value.tasks.find { task.id == it.task.id }
-            var newProgressDates = task.progressDates
-            oldTask?.let {
-                if (task.progress != it.task.progress) {
-                    val newProgress = task.progress - it.task.progressDates.sumOf { it.second }
-                    if (newProgress > 0) {
-                        newProgressDates = newProgressDates.plus(
-                            Pair(
-                                LocalDateTime.now()
-                                    .atZone(zoneId)
-                                    .toInstant()
-                                    .toEpochMilli(),
-                                newProgress)
-                        )
-                    }
-                }
-            }
-            taskRepository.update(task.copy(progressDates = newProgressDates))
-        }
-    }
-
-    fun deleteTask(taskUiModel: TaskUiModel) {
-        viewModelScope.launch {
-            taskRepository.delete(taskUiModel.task)
-            changeTasksOrder(uiState.value.settings.filter {it.task.id != taskUiModel.task.id})
-        }
+        return uiState.value.tasks.find {it.id == id}
     }
 
     fun toRightZone(deadline: Long?) : Long? {
@@ -257,620 +188,16 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun addTag(tag: Tag, task: TaskUiModel) {
-        viewModelScope.launch {
-            val tagId = tagRepository.insert(tag)
-            taskRepository.update(task.task.copy(tagsIds = task.task.tagsIds.plus(tagId)))
-        }
-    }
-
-    fun updateTag(tag: Tag) {
-        viewModelScope.launch {
-            tagRepository.update(tag)
-        }
-    }
-
-    fun deleteTag(tag: Tag) {
-        viewModelScope.launch {
-            tagRepository.delete(tag)
-        }
-    }
-
     fun findTagById(id: Long): Tag? {
         return uiState.value.tags.find {it.id == id}
     }
 
-    fun addEvent(event: EventUiModel) {
-        val correctedEvent = if (event.startTime == 0L || event.endTime == 0L) {
-            event.copy(
-                startTime = LocalDateTime.now()
-                    .withNano(0)
-                    .withSecond(0)
-                    .atZone(zoneId)
-                    .toInstant()
-                    .toEpochMilli(),
-                endTime = LocalDateTime.now()
-                    .withNano(0)
-                    .withSecond(0)
-                    .plusHours(1)
-                    .atZone(zoneId)
-                    .toInstant()
-                    .toEpochMilli()
-            )
-        } else {
-            event
-        }
-        viewModelScope.launch {
-            val id = eventRepository.insert(correctedEvent.toEvent())
-            openEventScreen(id)
-            timeLinedActivityRepository.insertAll(getActivitiesByEvent(correctedEvent.copy(id = id)))
-        }
-    }
-
-    fun updateEvent(event: EventUiModel) {
-        Log.i("mytag", event.toString())
-        viewModelScope.launch {
-            val oldEvent = findEventById(event.id)
-            oldEvent?.let {
-                eventRepository.update(event.toEvent())
-                if (it.startTime != event.startTime || it.endTime != event.endTime) {
-                    timeLinedActivityRepository.deleteAllByActivityId(event.id, false)
-                    timeLinedActivityRepository.insertAll(getActivitiesByEvent(event))
-                }
-            }
-        }
-    }
-
-    fun deleteEvent(event: EventUiModel) {
-        viewModelScope.launch {
-            eventRepository.delete(event.toEvent())
-        }
-    }
 
     fun findEventById(id: Long): EventUiModel? {
         return uiState.value.events.find {it.id == id}
     }
 
-    fun updateTimelinedActivity(activityUiModel: ActivityUiModel) {
-        viewModelScope.launch {
-            timeLinedActivityRepository.update(activityUiModel.toActivity())
-        }
-    }
-
-    fun addTimeSlot(timeSlotUiModel: TimeSlotUiModel) {
-        viewModelScope.launch {
-            val id = timeSlotRepository.insert(timeSlotUiModel.toTimeSlot())
-            openTimeSlotScreen(id)
-        }
-    }
-
-    fun updateTimeSlot(timeSlotUiModel: TimeSlotUiModel) {
-        viewModelScope.launch {
-            timeSlotRepository.update(timeSlotUiModel.toTimeSlot())
-        }
-    }
-
-    fun deleteTimeSlot(timeSlotUiModel: TimeSlotUiModel) {
-        viewModelScope.launch {
-            timeSlotRepository.delete(timeSlotUiModel.toTimeSlot())
-        }
-    }
-
     fun ChangeTasksWithoutTagsVisibility(show: Boolean) {
         _showTasksWithoutTags.value = show
     }
-
-    fun calculateTasksOrder(list: List<TaskUiModel>) {
-        val newTasks = list.sortedBy {  it.deadlineLocal ?: if (it.task.urgency < 6) LocalDateTime.MAX else LocalDateTime.MIN }
-    }
-
-    fun changeTasksOrder(order: List<TaskUiModel>) {
-        viewModelScope.launch {
-            dataStoreRepository.saveTasksOrder(order.map {it.task.id})
-        }
-    }
-
-    private fun getFreeTime(
-        startTime: LocalDateTime,
-        timeSlots: List<TimeSlotUiModel>,
-        eventActivities: List<ActivityUiModel>,
-        startIndex: Int
-    ) : Pair<List<FreeTime>, Int> {
-        var eventIndex = startIndex
-        val currentDate = startTime.toLocalDate()
-        val workingHours = timeSlots
-            .filter { it.daysOfWeek[currentDate.dayOfWeek.value - 1] }
-            .filter { it.endTime > startTime.hour * 60 + startTime.minute }
-            .map {
-                if (it.startTime < startTime.hour * 60 + startTime.minute) {
-                    it.copy(startTime = startTime.hour * 60 + startTime.minute)
-                } else {
-                    it
-                }
-            }
-            .map {
-                FreeTime(
-                    startTime = currentDate.atTime(it.startTime / 60, it.startTime % 60),
-                    endTime = currentDate.atTime(it.endTime / 60, it.endTime % 60),
-                    tagId = it.tagId
-                )
-            }
-        val freeTime = mutableListOf<FreeTime>()
-        workingHours.forEach { item ->
-            var tmpItemStartTime = item.startTime
-            while (tmpItemStartTime.isBefore(item.endTime)) {
-                if (eventIndex == eventActivities.size) {
-                    freeTime.add(FreeTime(tmpItemStartTime, item.endTime, item.tagId))
-                    break
-                }
-                if (eventActivities[eventIndex].endTimeLocal.isAfter(tmpItemStartTime)) {
-                    if (eventActivities[eventIndex].startTimeLocal.isAfter(tmpItemStartTime)) {
-                        if (item.endTime.isBefore(eventActivities[eventIndex].startTimeLocal)) {
-                            freeTime.add(FreeTime(tmpItemStartTime, item.endTime, item.tagId))
-                        } else {
-                            freeTime.add(FreeTime(tmpItemStartTime, eventActivities[eventIndex].startTimeLocal, item.tagId))
-                        }
-                    }
-                    tmpItemStartTime = eventActivities[eventIndex].endTimeLocal
-                    if (!tmpItemStartTime.isAfter(item.endTime)) {
-                        eventIndex++
-                    }
-                } else {
-                    eventIndex++
-                }
-            }
-        }
-        return Pair(freeTime, eventIndex)
-    }
-
-    private fun addTimelinedTasks(
-        timelinedTasks: MutableList<ActivityUiModel>,
-        tmpActivityList: MutableList<MutableList<ActivityUiModel>>,
-        tmpTasks: MutableList<Pair<Pair<TaskUiModel, Long>, Int>>,
-        freeTime: List<FreeTime>,
-        tasks: List<Pair<TaskUiModel,Long>>,
-        usedTasks: MutableList<Boolean>,
-        startIndex: Int
-    ) : Int {
-        var taskIndex = startIndex
-
-        for (time in freeTime) {
-            var tmpStart = time.startTime
-            if (taskIndex == usedTasks.size && tmpTasks.isEmpty()) {
-                break
-            }
-            while (tmpStart.isBefore(time.endTime)) {
-                while (taskIndex != usedTasks.size && usedTasks[taskIndex]) {
-                    taskIndex++
-                }
-                var suitableTaskIndex: Int? = null
-                for (i in taskIndex until tasks.size) {
-                    if (!usedTasks[i] && (time.tagId == 0L || time.tagId in tasks[i].first.task.tagsIds)) {
-                        suitableTaskIndex = i
-                        break
-                    }
-                }
-                var suitableTmpTaskIndex: Int? = null
-                for (i in 0 until tmpTasks.size) {
-                    if (suitableTaskIndex == null || suitableTaskIndex > tmpTasks[i].second) {
-                        if (time.tagId == 0L || time.tagId in tmpTasks[i].first.first.task.tagsIds) {
-                            if (suitableTmpTaskIndex == null || tmpTasks[suitableTmpTaskIndex].second > tmpTasks[i].second) {
-                                suitableTmpTaskIndex = i
-                            }
-                        }
-                    }
-                }
-
-                if (suitableTmpTaskIndex != null)  {
-                    val i = suitableTmpTaskIndex
-                    val tmpTask = tmpTasks[i].first
-                    val tmpEnd = tmpStart.plusMinutes(tmpTask.first.task.requiredTime.toLong())
-                    if (tmpEnd.isAfter(time.endTime)) {
-                        tmpActivityList[i].add(
-                            ActivityUiModel(
-                                isTask = true,
-                                activityId = tmpTask.first.task.id,
-                                subtaskId = tmpTask.second,
-                                startTimeLocal = tmpStart,
-                                endTimeLocal = time.endTime,
-                            )
-                        )
-                        val timeRemaining = tmpTask.first.task.requiredTime - ChronoUnit.MINUTES.between(tmpStart, time.endTime).toInt()
-                        tmpTasks[i] = Pair(tmpTask.copy(first = tmpTask.first.copy(task = tmpTask.first.task.copy(requiredTime = timeRemaining))), tmpTasks[i].second)
-                        tmpStart = time.endTime
-                    } else {
-                        tmpActivityList[i].add(
-                            ActivityUiModel(
-                                isTask = true,
-                                activityId = tmpTask.first.task.id,
-                                subtaskId = tmpTask.second,
-                                startTimeLocal = tmpStart,
-                                endTimeLocal = tmpEnd,
-                            )
-                        )
-                        timelinedTasks.addAll(tmpActivityList[i].mapIndexed { index, activity ->
-                            activity.copy(
-                                numberOfParts = tmpActivityList[i].size,
-                                partIndex = index + 1,
-                                isDeadlineMet = tmpTask.first.deadlineLocal?.let {!it.isBefore(tmpEnd)} ?: true
-                            )
-                        })
-                        tmpTasks.removeAt(i)
-                        tmpActivityList.removeAt(i)
-                        tmpStart = tmpEnd
-                    }
-                } else if (suitableTaskIndex != null) {
-                    val i = suitableTaskIndex
-                    usedTasks[i] = true
-                    val tmpEnd = tmpStart.plusMinutes(tasks[i].first.task.requiredTime.toLong())
-                    if (tmpEnd.isAfter(time.endTime)) {
-                        tmpActivityList.add(mutableListOf(ActivityUiModel(
-                            isTask = true,
-                            activityId = tasks[i].first.task.id,
-                            subtaskId = tasks[i].second,
-                            startTimeLocal = tmpStart,
-                            endTimeLocal = time.endTime,
-                        )))
-                        val timeRemaining = tasks[i].first.task.requiredTime - ChronoUnit.MINUTES.between(tmpStart, time.endTime).toInt()
-                        tmpTasks.add(Pair(tasks[i].copy(first = tasks[i].first.copy(task = tasks[i].first.task.copy(requiredTime = timeRemaining))), i))
-                        tmpStart = time.endTime
-                    } else {
-                        timelinedTasks.add(
-                            ActivityUiModel(
-                                isTask = true,
-                                activityId = tasks[i].first.task.id,
-                                subtaskId = tasks[i].second,
-                                startTimeLocal = tmpStart,
-                                endTimeLocal = tmpEnd,
-                                isDeadlineMet = tasks[i].first.deadlineLocal?.let {!it.isBefore(tmpEnd)} ?: true,
-                            )
-                        )
-                        tmpStart = tmpEnd
-                    }
-                } else {
-                    tmpStart = time.endTime
-                }
-                if (taskIndex == usedTasks.size && tmpTasks.isEmpty()) {
-                    break
-                }
-            }
-        }
-        return taskIndex
-    }
-
-    fun calculateTimeline(
-        tasklist: List<TaskUiModel>,
-        saveTimeline: Boolean = true,
-    ) : List<TaskUiModel> {
-        val startTime = LocalDateTime.now().withNano(0).withSecond(0)
-        val eventActivities = uiState.value.activities
-            .filter { !it.isTask }
-            .filter { it.endTimeLocal.isAfter(startTime) }
-        val tasks = tasklist
-            .filter { it.task.progress != it.task.requiredTime }
-            .flatMap {
-                it.task.subTasks.mapNotNull { subTask ->
-                    if (subTask.requiredTime != subTask.progress) {
-                        Pair(it.copy(task = it.task.copy(
-                            requiredTime = subTask.requiredTime,
-                            progress = subTask.progress
-                        )), subTask.id)
-                    } else {
-                        null
-                    }
-                }.plus(Pair(it, 0L))
-            }
-            .map {
-                it.copy(
-                    first = it.first.copy(
-                        task = it.first.task.copy(
-                            requiredTime = (it.first.task.requiredTime - it.first.task.progress)
-                        )
-                    )
-                )
-            }
-        var taskIndex = 0
-        val tmpActivityList: MutableList<MutableList<ActivityUiModel>> = mutableListOf()
-        val tmpTasks: MutableList<Pair<Pair<TaskUiModel, Long>, Int>> = mutableListOf()
-        val usedTasks = MutableList(tasks.size) { false }
-        var currentDate = startTime.toLocalDate()
-        var freeTime = listOf<FreeTime>()
-        var eventIndex = 0
-        val timelinedTasks = mutableListOf<ActivityUiModel>()
-        var f = getFreeTime(startTime, uiState.value.timeSlots, eventActivities, eventIndex)
-        eventIndex = f.second
-        freeTime = f.first
-        while (taskIndex != tasks.size || tmpTasks.isNotEmpty()) {
-            taskIndex = addTimelinedTasks(timelinedTasks, tmpActivityList, tmpTasks, freeTime, tasks, usedTasks, taskIndex)
-            currentDate = currentDate.plusDays(1)
-            f = getFreeTime(currentDate.atStartOfDay(), uiState.value.timeSlots, eventActivities, eventIndex)
-            eventIndex = f.second
-            freeTime = f.first
-        }
-        val overdueTasks = mutableMapOf<Long, Boolean>()
-        timelinedTasks.forEach {
-            if (it.subtaskId == 0L && it.partIndex == it.numberOfParts) {
-                overdueTasks[it.activityId] = it.isDeadlineMet
-            }
-        }
-        if (saveTimeline) {
-            changeTasksOrder(tasklist.filter { it.task.requiredTime != it.task.progress })
-            viewModelScope.launch {
-                timeLinedActivityRepository.deleteAllTasks()
-                timeLinedActivityRepository.insertAll(
-                    timelinedTasks.map {
-                        it.copy(isDeadlineMet = overdueTasks.getValue(it.activityId))
-                    }.map {it.toActivity() }
-                )
-            }
-        }
-        return timelinedTasks
-            .asSequence()
-            .filter { it.isTask && !it.isDeadlineMet }
-            .map { it.activityId }.toSet().toList()
-            .mapNotNull { id -> tasklist.find {it.task.id == id} }
-            .toList()
-    }
-
-    fun calculateTimelineByImportance() : List<TaskUiModel> {
-        val tasks = uiState.value.tasks.toMutableList()
-        while (true) {
-            val overdueTasks = calculateTimeline(tasks, false)
-                .filter { it.task.importance > 5 }
-                .sortedBy {  it.deadlineLocal ?: if (it.task.urgency < 6) LocalDateTime.MAX else LocalDateTime.MIN }
-            var flag = false
-            for (overdueTask in overdueTasks) {
-                var lastUnimportantTaskIndex: Int? = null
-                for (i in 0 until tasks.size) {
-                    if (tasks[i].task.id == overdueTask.task.id) {
-                        lastUnimportantTaskIndex?.let {
-                            for (j in it until i) {
-                                tasks[j] = tasks[j + 1].also { tasks[j + 1] = tasks[j] }
-                            }
-                            flag = true
-                        }
-                    } else if (tasks[i].task.importance < 6) {
-                        lastUnimportantTaskIndex = i
-                    }
-                    if (flag) {
-                        break
-                    }
-                }
-                if (flag) {
-                    break
-                }
-            }
-            if (flag.not()) {
-                break
-            }
-        }
-        return calculateTimeline(tasks, true)
-    }
-
-    private fun getActivitiesByEvent(event: EventUiModel) : List<TimeLinedActivity> {
-        val list = mutableListOf<TimeLinedActivity>()
-        var eventStart = Instant.ofEpochMilli(event.startTime).atZone(zoneId).toLocalDateTime()
-        val startDate = eventStart.toLocalDate()
-        val eventEnd = Instant.ofEpochMilli(event.endTime).atZone(zoneId).toLocalDateTime()
-        val endDate = if (eventEnd.hour == 0 && eventEnd.minute == 0) {
-            eventEnd.toLocalDate().minusDays(1)
-        } else {
-            eventEnd.toLocalDate()
-        }
-        if (ChronoUnit.MINUTES.between(eventStart, eventEnd) > 0) {
-            val numberOfParts = ChronoUnit.DAYS.between(startDate, endDate).toInt() + 1
-            var partIndex = 1
-            while (eventStart.toLocalDate() != endDate) {
-                list.add(
-                    TimeLinedActivity(
-                    startTime = eventStart.atZone(zoneId).toInstant().toEpochMilli(),
-                    endTime = eventStart
-                        .toLocalDate()
-                        .plusDays(1)
-                        .atStartOfDay()
-                        .atZone(zoneId)
-                        .toInstant()
-                        .toEpochMilli(),
-                    numberOfParts = numberOfParts,
-                    partIndex = partIndex,
-                    isTask = false,
-                    activityId = event.id
-                )
-                )
-                eventStart = eventStart
-                    .toLocalDate()
-                    .plusDays(1)
-                    .atStartOfDay()
-                partIndex++
-            }
-            list.add(
-                TimeLinedActivity(
-                startTime = eventStart.atZone(zoneId).toInstant().toEpochMilli(),
-                endTime = eventEnd.atZone(zoneId).toInstant().toEpochMilli(),
-                numberOfParts = numberOfParts,
-                partIndex = partIndex,
-                isTask = false,
-                activityId = event.id
-            )
-            )
-        } else {
-            Log.i("mytag", "event wrap error")
-        }
-        return list
-    }
-
-    fun getStatistics(startDate: LocalDate, endDate: LocalDate) : Statistics {
-        var totalTasksDone = 0
-        var totalQuadrant1TasksDone = 0
-        var totalQuadrant2TasksDone = 0
-        var totalQuadrant3TasksDone = 0
-        var totalQuadrant4TasksDone = 0
-        val tagsTotalTasksDone: MutableMap<Long, Int> = mutableMapOf()
-        uiState.value.tags.forEach {
-            tagsTotalTasksDone[it.id] = 0
-        }
-
-        uiState.value.tasks
-            .filter { it.task.progress == it.task.requiredTime }
-            .filter { it.progressDatesLocal.last().first.toLocalDate().between(startDate, endDate) }
-            .forEach {
-                totalTasksDone++
-                if (it.task.importance >= 6 && it.task.urgency >= 6) {
-                    totalQuadrant1TasksDone++
-                } else if (it.task.importance >= 6 && it.task.urgency <= 5) {
-                    totalQuadrant2TasksDone++
-                } else if (it.task.importance <= 5 && it.task.urgency >= 6) {
-                    totalQuadrant3TasksDone++
-                } else {
-                    totalQuadrant4TasksDone++
-                }
-                it.task.tagsIds.forEach {
-                    tagsTotalTasksDone[it] = tagsTotalTasksDone[it]?.plus(1) ?: 1
-                }
-            }
-
-        var totalProgressMinutes = 0
-        var totalQuadrant1ProgressMinutes = 0
-        var totalQuadrant2ProgressMinutes = 0
-        var totalQuadrant3ProgressMinutes = 0
-        var totalQuadrant4ProgressMinutes = 0
-        val tagsTotalProgressMinutes: MutableMap<Long, Int> = mutableMapOf()
-        uiState.value.tags.forEach {
-            tagsTotalProgressMinutes[it.id] = 0
-        }
-
-        uiState.value.tasks.forEach { task ->
-            task.progressDatesLocal.forEach { progress ->
-                if (progress.first.toLocalDate().between(startDate, endDate)) {
-                    totalProgressMinutes += progress.second
-                    if (task.task.importance >= 6 && task.task.urgency >= 6) {
-                        totalQuadrant1ProgressMinutes += progress.second
-                    } else if (task.task.importance >= 6 && task.task.urgency <= 5) {
-                        totalQuadrant2ProgressMinutes += progress.second
-                    } else if (task.task.importance <= 5 && task.task.urgency >= 6) {
-                        totalQuadrant3ProgressMinutes += progress.second
-                    } else {
-                        totalQuadrant4ProgressMinutes += progress.second
-                    }
-                    task.task.tagsIds.forEach {
-                        tagsTotalProgressMinutes[it] = tagsTotalProgressMinutes[it]?.plus(progress.second) ?: progress.second
-                    }
-                }
-            }
-        }
-        return Statistics(
-            totalTasksDone = totalTasksDone,
-            totalProgressMinutes = totalProgressMinutes,
-            totalQuadrant1TasksDone = totalQuadrant1TasksDone,
-            totalQuadrant2TasksDone = totalQuadrant2TasksDone,
-            totalQuadrant3TasksDone = totalQuadrant3TasksDone,
-            totalQuadrant4TasksDone = totalQuadrant4TasksDone,
-            totalQuadrant1ProgressMinutes = totalQuadrant1ProgressMinutes,
-            totalQuadrant2ProgressMinutes = totalQuadrant2ProgressMinutes,
-            totalQuadrant3ProgressMinutes = totalQuadrant3ProgressMinutes,
-            totalQuadrant4ProgressMinutes = totalQuadrant4ProgressMinutes,
-            tagsTotalTasksDone = tagsTotalTasksDone.toList(),
-            tagsTotalProgressMinutes = tagsTotalProgressMinutes.toList()
-        )
-    }
-
-    private fun LocalDate.between(startDate: LocalDate, endDate: LocalDate) : Boolean {
-        return (startDate.isAfter(this) || endDate.isBefore(this)).not()
-    }
-
-    private fun Task.toUiModel(): TaskUiModel {
-        val deadlineLocal = this.deadline?.let {
-            Instant.ofEpochMilli(it)
-                .atZone(zoneId)
-                .toLocalDateTime()
-        }
-        val deadlineText = deadlineLocal?.format(DateTimeFormatter.ofPattern("MMM d yyyy H:mm"))
-        val progressDatesLocal = this.progressDates.map {
-            Pair(Instant.ofEpochMilli(it.first).atZone(zoneId).toLocalDateTime(), it.second)
-        }
-        return TaskUiModel(this, deadlineLocal, deadlineText, progressDatesLocal)
-    }
-
-    private fun Event.toUiModel(): EventUiModel {
-        return EventUiModel(
-            id = this.id,
-            name = this.name,
-            description = this.description,
-            startTime = this.startTime,
-            endTime = this.endTime,
-            startTimeLocal = Instant.ofEpochMilli(this.startTime)
-                .atZone(zoneId)
-                .toLocalDateTime(),
-            endTimeLocal = Instant.ofEpochMilli(this.endTime)
-                .atZone(zoneId)
-                .toLocalDateTime()
-        )
-    }
-    private fun EventUiModel.toEvent(): Event {
-        return Event(
-            id = this.id,
-            name = this.name,
-            description = this.description,
-            startTime = this.startTime,
-            endTime = this.endTime,
-        )
-    }
-    private fun TimeLinedActivity.toUiModel(): ActivityUiModel {
-        return ActivityUiModel(
-            id = this.id,
-            startTime = this.startTime,
-            endTime = this.endTime,
-            numberOfParts = this.numberOfParts,
-            partIndex = this.partIndex,
-            activityId = this.activityId,
-            isTask = this.isTask,
-            isDone = this.isDone,
-            isDeadlineMet = this.isDeadlineMet,
-            subtaskId = this.subtaskId,
-            startTimeLocal = Instant.ofEpochMilli(this.startTime)
-                .atZone(zoneId)
-                .toLocalDateTime(),
-            endTimeLocal = Instant.ofEpochMilli(this.endTime)
-                .atZone(zoneId)
-                .toLocalDateTime()
-        )
-    }
-    private fun ActivityUiModel.toActivity(): TimeLinedActivity {
-        return TimeLinedActivity(
-            id = this.id,
-            startTime = this.startTimeLocal.atZone(zoneId).toInstant().toEpochMilli(),
-            endTime = this.endTimeLocal.atZone(zoneId).toInstant().toEpochMilli(),
-            numberOfParts = this.numberOfParts,
-            partIndex = this.partIndex,
-            activityId = this.activityId,
-            isTask = this.isTask,
-            isDone = this.isDone,
-            isDeadlineMet = this.isDeadlineMet,
-            subtaskId = this.subtaskId,
-        )
-    }
-    private fun TimeSlot.toUiModel(): TimeSlotUiModel {
-        return TimeSlotUiModel(
-            id = this.id,
-            tagId = this.tagId,
-            daysOfWeek = this.daysOfWeek,
-            startTime = this.startTime,
-            endTime = this.endTime,
-        )
-    }
-    private fun TimeSlotUiModel.toTimeSlot(): TimeSlot {
-        return TimeSlot(
-            id = this.id,
-            tagId = this.tagId,
-            daysOfWeek = this.daysOfWeek,
-            startTime = this.startTime,
-            endTime = this.endTime,
-        )
-    }
-
-    private data class FreeTime(
-        val startTime: LocalDateTime,
-        val endTime: LocalDateTime,
-        val tagId: Long
-    )
 }

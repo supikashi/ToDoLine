@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -17,14 +16,11 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -38,10 +34,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.spksh.todoline.ui.MainViewModel
 import com.spksh.todoline.R
-import com.spksh.todoline.ui.components.ChildTasksPicker
 import com.spksh.todoline.ui.components.DateTimePicker
-import com.spksh.todoline.ui.components.RequiredTimePicker
-import com.spksh.todoline.ui.components.TagPicker
 import java.time.format.DateTimeFormatter
 
 @Composable
@@ -58,7 +51,9 @@ fun EventScreen(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp, start = 8.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp, start = 8.dp)
         ) {
             IconButton(onClick = {viewModel.popBackStack()}) {
                 Icon(
@@ -76,11 +71,11 @@ fun EventScreen(
                     onDismissRequest = {expanded = false},
                 ) {
                     DropdownMenuItem(
-                        text = {Text("Delete")},
+                        text = {Text(stringResource(R.string.delete))},
                         onClick = {
                             viewModel.popBackStack()
                             event?.let {
-                                viewModel.deleteEvent(it)
+                                viewModel.eventFeatures.delete(it)
                             }
                         }
                     )
@@ -93,7 +88,7 @@ fun EventScreen(
             onValueChange = { newName ->
                 event?.let {
                     Log.i("mytag", "name changed")
-                    viewModel.updateEvent(it.copy(name = newName))
+                    viewModel.eventFeatures.update(it.copy(name = newName))
                     name = newName
                 }
             },
@@ -102,7 +97,7 @@ fun EventScreen(
                 focusedContainerColor = Color.Transparent,
                 unfocusedContainerColor = Color.Transparent
             ),
-            placeholder = {Text("Event")},
+            placeholder = {Text(stringResource(R.string.event))},
             modifier = Modifier.fillMaxWidth()
         )
         var description by remember { mutableStateOf(event?.description ?: "") }
@@ -111,7 +106,7 @@ fun EventScreen(
             onValueChange = { newDescription ->
                 event?.let {
                     Log.i("mytag", "description changed")
-                    viewModel.updateEvent(it.copy(description = newDescription))
+                    viewModel.eventFeatures.update(it.copy(description = newDescription))
                     description = newDescription
                 }
             },
@@ -124,17 +119,22 @@ fun EventScreen(
                 focusedIndicatorColor = Color.Transparent,
                 disabledIndicatorColor = Color.Transparent
             ),
-            placeholder = {Text("Description")},
-            modifier = Modifier.fillMaxWidth().weight(1f)
+            placeholder = {Text(stringResource(R.string.description))},
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
         )
         Column(
             verticalArrangement = Arrangement.spacedBy(0.dp),
             modifier = Modifier
-                .background(color = MaterialTheme.colorScheme.surfaceContainer, shape = RoundedCornerShape(16.dp))
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    shape = RoundedCornerShape(16.dp)
+                )
                 .padding(16.dp)
         ) {
             Text(
-                text = "Event Parameters",
+                text = stringResource(R.string.event_parameters),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -144,7 +144,7 @@ fun EventScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Start Time")
+                Text(stringResource(R.string.start_time))
                 DateTimePicker(
                     deadline = event?.startTimeLocal
                         ?.format(DateTimeFormatter.ofPattern("MMM d yyyy H:mm")),
@@ -152,7 +152,7 @@ fun EventScreen(
                         viewModel.toRightZone(newStartTime)?.let { time ->
                             event?.let {
                                 Log.i("mytag", "start time changed")
-                                viewModel.updateEvent(it.copy(startTime = time))
+                                viewModel.eventFeatures.update(it.copy(startTime = time))
                             }
                         }
                     }
@@ -163,7 +163,7 @@ fun EventScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("End Time")
+                Text(stringResource(R.string.end_time))
                 DateTimePicker(
                     deadline = event?.endTimeLocal
                         ?.format(DateTimeFormatter.ofPattern("MMM d yyyy H:mm")),
@@ -171,7 +171,7 @@ fun EventScreen(
                         viewModel.toRightZone(newEndTime)?.let { time ->
                             event?.let {
                                 Log.i("mytag", "end time changed")
-                                viewModel.updateEvent(it.copy(endTime = time))
+                                viewModel.eventFeatures.update(it.copy(endTime = time))
                             }
                         }
                     }

@@ -3,7 +3,7 @@ package com.spksh.todoline.ui.model
 import java.time.LocalDate
 import java.time.LocalDateTime
 
-sealed class Wrapper(
+/*sealed class Wrapper(
     val startTimeLocal: LocalDateTime = LocalDateTime.now(),
     val endTimeLocal: LocalDateTime = LocalDateTime.now(),
     val numberOfParts: Int = 1,
@@ -38,5 +38,5 @@ class TaskWrapper(
     endTimeLocal = endTimeLocal,
     numberOfParts = numberOfParts,
     partIndex = partIndex
-)
+)*/
 

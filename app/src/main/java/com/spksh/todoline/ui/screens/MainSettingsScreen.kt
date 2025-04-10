@@ -1,5 +1,6 @@
 package com.spksh.todoline.ui.screens
 
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,12 +17,15 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.spksh.todoline.R
 import com.spksh.todoline.ui.MainViewModel
@@ -30,13 +34,14 @@ import com.spksh.todoline.ui.MainViewModel
 fun MainSettingsScreen(
     viewModel: MainViewModel = viewModel(),
 ) {
+    val uiState = viewModel.uiState.collectAsStateWithLifecycle()
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(bottom = 8.dp, start = 8.dp)
         ) {
             Text(
-                text = "ToDoLine Settings",
+                text = stringResource(R.string.todoline_settings),
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.headlineSmall
             )
@@ -65,7 +70,7 @@ fun MainSettingsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = "Schedule")
+                    Text(text = stringResource(R.string.schedule))
                     Icon(
                         imageVector = Icons.AutoMirrored.Default.KeyboardArrowRight,
                         contentDescription = null
@@ -84,10 +89,47 @@ fun MainSettingsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = "Statistics")
+                    Text(text = stringResource(R.string.statistics))
                     Icon(
                         imageVector = Icons.AutoMirrored.Default.KeyboardArrowRight,
                         contentDescription = null
+                    )
+                }
+            }
+            Card(
+                colors = CardDefaults.cardColors().copy(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                        .padding(horizontal = 8.dp)
+                ) {
+                    Text(stringResource(R.string.language))
+                    TextButton(
+                        onClick = {viewModel.settingsFeatures.setLanguage(!uiState.value.settings.isEnglish)}
+                    ) {
+                        Text(if (uiState.value.settings.isEnglish) "English" else "Русский")
+                    }
+                }
+            }
+            Card(
+                colors = CardDefaults.cardColors().copy(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                        .padding(horizontal = 8.dp)
+                ) {
+                    Text(stringResource(R.string.dark_theme))
+                    Switch(
+                        checked = uiState.value.settings.isDarkTheme,
+                        onCheckedChange = {viewModel.settingsFeatures.setTheme(it)}
                     )
                 }
             }

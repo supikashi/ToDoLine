@@ -1,5 +1,6 @@
 package com.spksh.todoline.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
@@ -24,7 +25,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -41,7 +41,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Shapes
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -58,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -98,16 +98,18 @@ fun CalendarScreen(
     val tasksWithBadDeadline = remember { mutableStateListOf<TaskUiModel>() }
 
     val interactionSource = remember { MutableInteractionSource() }
+    val context = LocalContext.current
     Box {
         Column {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(horizontal = 16.dp)
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
                     .padding(bottom = 8.dp, start = 8.dp)
 
             ) {
                 Text(
-                    text = "ToDoLine Calendar",
+                    text = stringResource(R.string.todoline_calendar),
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.headlineSmall
                 )
@@ -115,7 +117,7 @@ fun CalendarScreen(
                     onClick = {isTimeLine = !isTimeLine}
                 ) {
                     Text(
-                        text = if (isTimeLine) "TimeLine" else "List",
+                        text = if (isTimeLine) stringResource(R.string.day) else stringResource(R.string.list),
                         style = MaterialTheme.typography.titleLarge
                     )
                 }
@@ -153,14 +155,14 @@ fun CalendarScreen(
                                     viewModel.openEventScreen(id)
                             },
                             onCheckBoxClick = { task, activity, progress ->
-                                viewModel.updateTimelinedActivity(activity.copy(isDone = !activity.isDone))
+                                viewModel.timelinedActivityFeatures.update(activity.copy(isDone = !activity.isDone))
                                 if (activity.subtaskId == 0L) {
-                                    val newProgress = min(max(0, task.task.progress + progress), task.task.requiredTime)
-                                    viewModel.updateTask(task.task.copy(progress = newProgress))
+                                    val newProgress = min(max(0, task.progress + progress), task.requiredTime)
+                                    viewModel.taskFeatures.update(task.copy(progress = newProgress))
                                 } else {
-                                    val i = task.task.subTasks.indexOfFirst { it.id == activity.subtaskId }
-                                    val newProgress = min(max(0, task.task.subTasks[i].progress + progress), task.task.subTasks[i].requiredTime)
-                                    viewModel.updateTask(task.task.copy(subTasks = task.task.subTasks.mapIndexed { index, subTask ->
+                                    val i = task.subTasks.indexOfFirst { it.id == activity.subtaskId }
+                                    val newProgress = min(max(0, task.subTasks[i].progress + progress), task.subTasks[i].requiredTime)
+                                    viewModel.taskFeatures.update(task.copy(subTasks = task.subTasks.mapIndexed { index, subTask ->
                                         if (index == i) subTask.copy(progress = newProgress) else subTask
                                     }))
                                 }
@@ -190,14 +192,14 @@ fun CalendarScreen(
                                         viewModel.openEventScreen(item.activityId)
                                 },
                                 onCheckBoxClick = { task, progress ->
-                                    viewModel.updateTimelinedActivity(item.copy(isDone = !item.isDone))
+                                    viewModel.timelinedActivityFeatures.update(item.copy(isDone = !item.isDone))
                                     if (item.subtaskId == 0L) {
-                                        val newProgress = min(max(0, task.task.progress + progress), task.task.requiredTime)
-                                        viewModel.updateTask(task.task.copy(progress = newProgress))
+                                        val newProgress = min(max(0, task.progress + progress), task.requiredTime)
+                                        viewModel.taskFeatures.update(task.copy(progress = newProgress))
                                     } else {
-                                        val i = task.task.subTasks.indexOfFirst { it.id == item.subtaskId }
-                                        val newProgress = min(max(0, task.task.subTasks[i].progress + progress), task.task.subTasks[i].requiredTime)
-                                        viewModel.updateTask(task.task.copy(subTasks = task.task.subTasks.mapIndexed { index, subTask ->
+                                        val i = task.subTasks.indexOfFirst { it.id == item.subtaskId }
+                                        val newProgress = min(max(0, task.subTasks[i].progress + progress), task.subTasks[i].requiredTime)
+                                        viewModel.taskFeatures.update(task.copy(subTasks = task.subTasks.mapIndexed { index, subTask ->
                                             if (index == i) subTask.copy(progress = newProgress) else subTask
                                         }))
                                     }
@@ -219,22 +221,35 @@ fun CalendarScreen(
             Surface(
                 shape = FloatingActionButtonDefaults.shape,
                 color = MaterialTheme.colorScheme.primaryContainer,
-                modifier = Modifier.size(56.dp).combinedClickable(
-                    interactionSource = interactionSource,
-                    indication = LocalIndication.current,
-                    onLongClick = {
-                        openCustomTaskOrderBottomSheet = true
-                    },
-                    onClick = {
-                        scope.launch {
-                            tasksWithBadDeadline.clear()
-                            tasksWithBadDeadline.addAll(viewModel.calculateTimeline(uiState.tasks))
-                            if (tasksWithBadDeadline.isNotEmpty()) {
-                                openOverdueBottomSheet = true
+                modifier = Modifier
+                    .size(56.dp)
+                    .combinedClickable(
+                        interactionSource = interactionSource,
+                        indication = LocalIndication.current,
+                        onLongClick = {
+                            openCustomTaskOrderBottomSheet = true
+                        },
+                        onClick = {
+                            scope.launch {
+                                val res = viewModel.timelineFeatures.getTimeline(
+                                    uiState.tasks
+                                ).await()
+                                if (res == null) {
+                                    Toast.makeText(
+                                        context,
+                                        "Bad Schedule",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                } else {
+                                    tasksWithBadDeadline.clear()
+                                    tasksWithBadDeadline.addAll(res)
+                                    if (tasksWithBadDeadline.isNotEmpty()) {
+                                        openOverdueBottomSheet = true
+                                    }
+                                }
                             }
                         }
-                    }
-                )
+                    )
             ) {
                 Icon(
                     imageVector = Icons.Filled.Refresh,
@@ -244,9 +259,9 @@ fun CalendarScreen(
             }
             Spacer(Modifier.height(16.dp))
             FloatingActionButton(
-                onClick = { viewModel.addEvent(EventUiModel()) },
+                onClick = { viewModel.eventFeatures.add(EventUiModel()) },
             ) {
-                Icon(imageVector = Icons.Filled.Add, contentDescription = "Add Task")
+                Icon(imageVector = Icons.Filled.Add, contentDescription = stringResource(R.string.add_task))
             }
         }
     }
@@ -256,7 +271,9 @@ fun CalendarScreen(
             sheetState = overdueBottomSheetState,
         ) {
             Column(
-                modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth()
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .fillMaxWidth()
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -265,13 +282,22 @@ fun CalendarScreen(
                     Button(
                         onClick = {
                             scope.launch {
-                                tasksWithBadDeadline.clear()
-                                tasksWithBadDeadline.addAll(viewModel.calculateTimelineByImportance())
-                                openOverdueBottomSheet = tasksWithBadDeadline.isNotEmpty()
+                                val res = viewModel.timelineFeatures.getTimelineByImportance(uiState.tasks).await()
+                                if (res == null) {
+                                    Toast.makeText(
+                                        context,
+                                        "Bad Schedule",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                } else {
+                                    tasksWithBadDeadline.clear()
+                                    tasksWithBadDeadline.addAll(res)
+                                    openOverdueBottomSheet = tasksWithBadDeadline.isNotEmpty()
+                                }
                             }
                         },
                     ) {
-                        Text(text = "Promote Important Tasks")
+                        Text(text = stringResource(R.string.promote_important_tasks))
                     }
                     Button(
                         onClick = {
@@ -285,41 +311,43 @@ fun CalendarScreen(
                             openCustomTaskOrderBottomSheet = true
                         },
                     ) {
-                        Text(text = "Set Custom Order")
+                        Text(text = stringResource(R.string.set_custom_order))
                     }
 
                 }
                 Text(
-                    text = "Potentially Overdue Tasks",
+                    text = stringResource(R.string.potentially_overdue_tasks),
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp)
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .padding(16.dp)
                 )
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    if (tasksWithBadDeadline.any { it.task.importance > 5 }) {
+                    if (tasksWithBadDeadline.any { it.importance > 5 }) {
                         item {
                             Text(
-                                text = "Important"
+                                text = stringResource(R.string.important)
                             )
                         }
                     }
-                    items(tasksWithBadDeadline.filter { it.task.importance > 5 }) {
+                    items(tasksWithBadDeadline.filter { it.importance > 5 }) {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors().copy(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
                         ) {
                             Column(
                                 modifier = Modifier
-                                    .clickable {  }
+                                    .clickable { }
                                     .padding(8.dp)
                                     .padding(horizontal = 8.dp)
                                     .fillMaxSize()
                             ) {
                                 Text(
-                                    text = it.task.name,
+                                    text = it.name,
                                     //maxLines = 1
                                     color = MaterialTheme.colorScheme.onSurface
                                     //modifier = Modifier.
@@ -334,25 +362,25 @@ fun CalendarScreen(
                             }
                         }
                     }
-                    if (tasksWithBadDeadline.any { it.task.importance < 6 }) {
+                    if (tasksWithBadDeadline.any { it.importance < 6 }) {
                         item {
-                            Text("Unimportant")
+                            Text(stringResource(R.string.unimportant))
                         }
                     }
-                    items(tasksWithBadDeadline.filter { it.task.importance < 6 }) {
+                    items(tasksWithBadDeadline.filter { it.importance < 6 }) {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors().copy(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
                         ) {
                             Column(
                                 modifier = Modifier
-                                    .clickable {  }
+                                    .clickable { }
                                     .padding(8.dp)
                                     .padding(horizontal = 8.dp)
                                     .fillMaxSize()
                             ) {
                                 Text(
-                                    text = it.task.name,
+                                    text = it.name,
                                     //maxLines = 1
                                     color = MaterialTheme.colorScheme.onSurface
                                     //modifier = Modifier.
@@ -378,20 +406,35 @@ fun CalendarScreen(
             sheetState = customTaskOrderBottomSheetState
         ) {
             Column(
-                modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth()
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .fillMaxWidth()
             ) {
                 Text(
-                    text = "Order Of Tasks",
+                    text = stringResource(R.string.order_of_tasks),
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp)
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .padding(16.dp)
                 )
                 LazyColumnDragAndDrop(
-                    tasks = uiState.settings,
+                    tasks = uiState.settings.tasksOrder,
                     timeline = uiState.activities.filter { it.isTask },
                     onOrderChange = {
-                        viewModel.changeTasksOrder(it)
-                        viewModel.calculateTimeline(tasklist = it)
+                        viewModel.taskFeatures.changeTaskOrder(it)
+                        scope.launch {
+                            val res = viewModel.timelineFeatures.getTimeline(
+                                tasklist = it
+                            ).await()
+                            if (res == null) {
+                                Toast.makeText(
+                                    context,
+                                    "Bad Schedule",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
                     },
                     item = { task, deadlineColor ->
                         Card(
@@ -400,13 +443,13 @@ fun CalendarScreen(
                         ) {
                             Column(
                                 modifier = Modifier
-                                    .clickable {  }
+                                    .clickable { }
                                     .padding(8.dp)
                                     .padding(horizontal = 8.dp)
                                     .fillMaxSize()
                             ) {
                                 Text(
-                                    text = task.task.name,
+                                    text = task.name,
                                     //maxLines = 1
                                     color = MaterialTheme.colorScheme.onSurface
                                     //modifier = Modifier.
@@ -459,7 +502,8 @@ fun TimeLine(
     }
     var textHeight by remember { mutableStateOf(0) }
     Box(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
             .height((24 * 60).dp)
             .padding(horizontal = 16.dp)
             .verticalScroll(rememberScrollState())
@@ -492,7 +536,13 @@ fun TimeLine(
                             .width(10.dp)
                             .height((it.endTime - it.startTime).dp)
                             .offset(y = it.startTime.dp)
-                            .background(Color(android.graphics.Color.parseColor(tag?.color ?: "#F5F5DC")))
+                            .background(
+                                Color(
+                                    android.graphics.Color.parseColor(
+                                        tag?.color ?: "#F5F5DC"
+                                    )
+                                )
+                            )
                     )
                 }
             }
@@ -501,7 +551,9 @@ fun TimeLine(
             ) {
                 repeat(23) { hour ->
                     HorizontalDivider(
-                        modifier = Modifier.offset(y = (60 * (hour + 1)).dp).padding(horizontal = 10.dp)
+                        modifier = Modifier
+                            .offset(y = (60 * (hour + 1)).dp)
+                            .padding(horizontal = 10.dp)
                     )
                 }
                 todayActivities.forEach {

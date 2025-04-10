@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,6 +37,7 @@ import com.spksh.todoline.ui.components.AnimatedCircle
 import com.spksh.todoline.ui.components.DateRangePicker
 import com.spksh.todoline.ui.model.Statistics
 import com.spksh.todoline.ui.theme.extendedDark
+import kotlinx.coroutines.launch
 
 
 @Composable
@@ -43,15 +45,16 @@ fun StatisticsScreen(
     viewModel: MainViewModel = viewModel(),
 ) {
     var statistics by remember { mutableStateOf<Statistics?>(null) }
-
+    val scope = rememberCoroutineScope()
     Column {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 16.dp)
+            modifier = Modifier
+                .padding(horizontal = 16.dp)
                 .padding(bottom = 8.dp, start = 8.dp)
         ) {
             Text(
-                text = "ToDoLine Statistics",
+                text = stringResource(R.string.todoline_statistics),
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.headlineSmall
             )
@@ -70,7 +73,9 @@ fun StatisticsScreen(
             DateRangePicker(
                 onDatesSelected = { start, end ->
                     if (start != null && end != null) {
-                        statistics = viewModel.getStatistics(start, end)
+                        scope.launch {
+                            statistics = viewModel.statisticsFeatures.getStatistics(start, end).await()
+                        }
                     }
                 }
             )
@@ -79,7 +84,9 @@ fun StatisticsScreen(
             statistics?.let {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(horizontal = 24.dp).fillMaxWidth()
+                    modifier = Modifier
+                        .padding(horizontal = 24.dp)
+                        .fillMaxWidth()
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -106,7 +113,7 @@ fun StatisticsScreen(
                             verticalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "Total Tasks Done: ${it.totalTasksDone}"
+                                text = stringResource(R.string.total_tasks_done, it.totalTasksDone)
                             )
                             Text(
                                 text = "Quadrant 1: ${it.totalQuadrant1TasksDone}",
@@ -187,7 +194,9 @@ fun StatisticsScreen(
                                 .size(128.dp)
                         )
                         Column(
-                            modifier = Modifier.height(128.dp).verticalScroll(rememberScrollState()),
+                            modifier = Modifier
+                                .height(128.dp)
+                                .verticalScroll(rememberScrollState()),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             it.tagsTotalTasksDone.forEach {
@@ -215,7 +224,9 @@ fun StatisticsScreen(
                                 .size(128.dp)
                         )
                         Column(
-                            modifier = Modifier.height(128.dp).verticalScroll(rememberScrollState()),
+                            modifier = Modifier
+                                .height(128.dp)
+                                .verticalScroll(rememberScrollState()),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             it.tagsTotalProgressMinutes.forEach {
