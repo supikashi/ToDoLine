@@ -13,7 +13,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.spksh.todoline.R
 import com.spksh.todoline.ui.model.TaskUiModel
 
 
@@ -31,15 +33,15 @@ fun ChildTasksPicker(
     ) {
         Text(
             if (childTasksIds.isEmpty())
-                "Create Dependent Tasks"
+                stringResource(R.string.create_dependent_tasks)
             else
-                "${childTasksIds.size} Child Tasks"
+                "${childTasksIds.size} ${stringResource(R.string.dependent_tasks)}"
         )
     }
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
-            title = { Text("Child Tasks") },
+            title = { Text(stringResource(R.string.dependent_tasks)) },
             text = {
                 LazyColumn(modifier = Modifier.heightIn(0.dp, 200.dp)) {
                     item {
@@ -49,7 +51,7 @@ fun ChildTasksPicker(
                                 onCreateTask()
                             },
                         ) {
-                            Text("Create New")
+                            Text(stringResource(R.string.create_new))
                         }
                     }
                     items(tasks.filter { it.id in childTasksIds }) { task ->

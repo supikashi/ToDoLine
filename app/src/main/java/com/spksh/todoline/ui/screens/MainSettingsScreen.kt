@@ -1,5 +1,8 @@
 package com.spksh.todoline.ui.screens
 
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
 import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,11 +26,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.spksh.todoline.R
+import com.spksh.todoline.ui.MainActivity
 import com.spksh.todoline.ui.MainViewModel
 
 @Composable
@@ -35,6 +40,7 @@ fun MainSettingsScreen(
     viewModel: MainViewModel = viewModel(),
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -108,8 +114,11 @@ fun MainSettingsScreen(
                         .padding(horizontal = 8.dp)
                 ) {
                     Text(stringResource(R.string.language))
+
                     TextButton(
-                        onClick = {viewModel.settingsFeatures.setLanguage(!uiState.value.settings.isEnglish)}
+                        onClick = {
+                            viewModel.settingsFeatures.setLanguage(!uiState.value.settings.isEnglish, context)
+                        }
                     ) {
                         Text(if (uiState.value.settings.isEnglish) "English" else "Русский")
                     }
@@ -129,7 +138,7 @@ fun MainSettingsScreen(
                     Text(stringResource(R.string.dark_theme))
                     Switch(
                         checked = uiState.value.settings.isDarkTheme,
-                        onCheckedChange = {viewModel.settingsFeatures.setTheme(it)}
+                        onCheckedChange = {viewModel.settingsFeatures.setTheme(it, context)}
                     )
                 }
             }

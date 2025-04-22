@@ -1,15 +1,12 @@
 package com.spksh.todoline.ui.components
 
 import android.util.Log
-import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimeInput
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerState
 import androidx.compose.material3.rememberDatePickerState
@@ -19,8 +16,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
+import com.spksh.todoline.R
 import java.time.LocalTime
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,7 +32,7 @@ fun DateTimePicker(
     TextButton(
         onClick = {showDatePicker = true}
     ) {
-        Text(deadline ?: "Choose Date")
+        Text(deadline ?: stringResource(R.string.choose_date))
     }
     if (showDatePicker) {
         DatePickerModal(
@@ -79,7 +77,6 @@ fun TimePickerWrap(
         onDismiss = { onDismiss() },
         onConfirm = { onConfirm(timePickerState) }
     ) {
-        //TimeInput(state = timePickerState)
         TimePicker(state = timePickerState)
     }
 }
@@ -94,12 +91,12 @@ fun TimePickerDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = { onConfirm() }) {
-                Text("OK")
+                Text(stringResource(R.string.ok))
             }
         },
         dismissButton = {
             TextButton(onClick = { onDismiss() }) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         },
         text = { content() }
@@ -120,12 +117,12 @@ fun DatePickerModal(
             TextButton(onClick = {
                 onDateSelected(datePickerState.selectedDateMillis)
             }) {
-                Text("OK")
+                Text(stringResource(R.string.ok))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     ) {

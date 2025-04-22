@@ -62,20 +62,16 @@ fun TaskScreen(
     viewModel: MainViewModel = viewModel(),
 ) {
     Log.i("mytag", "todo screen")
-    //var task by remember { mutableStateOf(viewModel.findTaskById(taskId)) }
     val task = viewModel.findTaskById(taskId)
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    //LaunchedEffect(id) {  }
     var expandedMenu by remember { mutableStateOf(false) }
-    var importance by remember { mutableFloatStateOf((task?.importance ?: 1).toFloat()) }
-    var urgency by remember { mutableFloatStateOf((task?.urgency ?: 1).toFloat()) }
     var progress by remember { mutableFloatStateOf((task?.progress ?: 0).toFloat()) }
     var expandedQuadrantMenu by remember { mutableStateOf(false) }
     val quadrantsNames = listOf(
-        "Important & Urgent",
-        "Important & Not Urgent",
-        "Unimportant & Urgent",
-        "Unimportant & Not Urgent")
+        stringResource(R.string.important_urgent),
+        stringResource(R.string.important_not_urgent),
+        stringResource(R.string.unimportant_urgent),
+        stringResource(R.string.unimportant_not_urgent))
     val quadrantsColors = listOf(
         extendedDark.quadrant1.colorContainer,
         extendedDark.quadrant2.colorContainer,
@@ -92,7 +88,9 @@ fun TaskScreen(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp, start = 8.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp, start = 8.dp)
         ) {
             IconButton(onClick = {viewModel.popBackStack()}) {
                 Icon(
@@ -137,7 +135,7 @@ fun TaskScreen(
                 focusedContainerColor = Color.Transparent,
                 unfocusedContainerColor = Color.Transparent
             ),
-            placeholder = {Text("Task")},
+            placeholder = {Text(stringResource(R.string.task))},
             modifier = Modifier.fillMaxWidth()
         )
         var description by remember { mutableStateOf(task?.description ?: "") }
@@ -163,7 +161,7 @@ fun TaskScreen(
                         focusedIndicatorColor = Color.Transparent,
                         disabledIndicatorColor = Color.Transparent
                     ),
-                    placeholder = {Text("Description")},
+                    placeholder = {Text(stringResource(R.string.description))},
                     //modifier = Modifier.fillMaxWidth().weight(1f)
                 )
             }
@@ -247,16 +245,19 @@ fun TaskScreen(
                 }
             }
         ) {
-            Text("Add Subtask")
+            Text(stringResource(R.string.add_subtask))
         }
         Column(
             verticalArrangement = Arrangement.spacedBy(0.dp),
             modifier = Modifier
-                .background(color = MaterialTheme.colorScheme.surfaceContainer, shape = RoundedCornerShape(16.dp))
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    shape = RoundedCornerShape(16.dp)
+                )
                 .padding(16.dp)
         ) {
             Text(
-                text = "Task Parameters",
+                text = stringResource(R.string.task_parameters),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -266,7 +267,10 @@ fun TaskScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Quadrant", modifier = Modifier.weight(1f).fillMaxWidth())
+                Text(
+                    stringResource(R.string.quadrant), modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth())
                 ExposedDropdownMenuBox(
                     expanded = expandedQuadrantMenu,
                     onExpandedChange = { expandedQuadrantMenu = !expandedQuadrantMenu },
@@ -338,7 +342,7 @@ fun TaskScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Deadline")
+                Text(stringResource(R.string.deadline))
                 DateTimePicker(
                     deadline = task?.deadlineText,
                     onDeadlineSelected = { newDeadline ->
@@ -354,7 +358,7 @@ fun TaskScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Time Required")
+                Text(stringResource(R.string.time_required))
                 RequiredTimePicker(
                     requiredTime = task?.requiredTime ?: 0,
                     onTimeSelected = { newTime ->
@@ -370,7 +374,7 @@ fun TaskScreen(
                 modifier = Modifier.fillMaxWidth()
             )  {
                 Text(
-                    text = "Tags",
+                    text = stringResource(R.string.tags),
                     modifier = Modifier.width(100.dp)
                 )
                 TagPicker(
@@ -406,13 +410,13 @@ fun TaskScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 )  {
-                    Text(text = "Parent Task")
+                    Text(text = stringResource(R.string.parent_task))
                     TextButton(
                         onClick = {
                             viewModel.openTaskScreen(parentId)
                         }
                     ) {
-                        Text("Go To Parent Task")
+                        Text(stringResource(R.string.go_to_parent_task))
                     }
                 }
             }
@@ -421,7 +425,7 @@ fun TaskScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             )  {
-                Text(text = "Dependent Tasks")
+                Text(text = stringResource(R.string.dependent_tasks))
                 ChildTasksPicker(
                     tasks = uiState.tasks,
                     childTasksIds = task?.childTasksIds ?: emptyList(),
@@ -438,7 +442,7 @@ fun TaskScreen(
                     },
                 )
             }
-            Text("Progress")
+            Text(stringResource(R.string.progress))
             Slider(
                 value = progress,
                 onValueChange = { progress = it },

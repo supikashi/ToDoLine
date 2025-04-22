@@ -8,11 +8,13 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -41,12 +43,17 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.spksh.todoline.ui.MainViewModel
@@ -227,9 +234,17 @@ fun Matrix(
     var secondListBounds by remember { mutableStateOf<Rect>(Rect(Offset(0f,0f), Offset(0f,0f))) }
     var thirdListBounds by remember { mutableStateOf<Rect>(Rect(Offset(0f,0f), Offset(0f,0f))) }
     var fourthListBounds by remember { mutableStateOf<Rect>(Rect(Offset(0f,0f), Offset(0f,0f))) }
+    var draggedItemCenter by remember { mutableStateOf(Offset(0f,0f)) }
     var draggedItem by remember { mutableStateOf<TaskUiModel?>(null) }
     var offset by remember { mutableStateOf(Offset.Zero) }
-    Box {
+    var size by remember { mutableStateOf<IntSize>(IntSize.Zero) }
+    var boxOffset by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    val density = LocalDensity.current
+    Box(
+        modifier = Modifier.onGloballyPositioned {
+            boxOffset = it
+        }
+    ) {
         Column(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = modifier
@@ -247,12 +262,13 @@ fun Matrix(
                         .weight(1f)
                         .onGloballyPositioned { coordinates ->
                             firstListBounds = coordinates.boundsInWindow()
+                            size = coordinates.size
                         },
                     currentTime = currentTime,
                     color = extendedDark.quadrant1.colorContainer,
                     onDragStart = { task, taskOffset ->
                         draggedItem = task
-                        offset = taskOffset
+                        offset = boxOffset?.screenToLocal(taskOffset) ?: Offset.Zero
                     },
                     onDrag = { change, dragAmount ->
                         change.consume()
@@ -260,13 +276,13 @@ fun Matrix(
                     },
                     onDragEnd = {
                         draggedItem?.let {
-                            if (offset.y < firstListBounds.bottom && offset.x < firstListBounds.right) {
+                            if (draggedItemCenter.y < firstListBounds.bottom && draggedItemCenter.x < firstListBounds.right) {
                                 onTaskDragged(it, 10, 10)
-                            } else if (offset.y < firstListBounds.bottom && offset.x > firstListBounds.left) {
+                            } else if (draggedItemCenter.y < firstListBounds.bottom && draggedItemCenter.x > firstListBounds.left) {
                                 onTaskDragged(it, 10, 0)
-                            } else if (offset.y > firstListBounds.top && offset.x < firstListBounds.right) {
+                            } else if (draggedItemCenter.y > firstListBounds.top && draggedItemCenter.x < firstListBounds.right) {
                                 onTaskDragged(it, 0, 10)
-                            } else if (offset.y > firstListBounds.top && offset.x > firstListBounds.left) {
+                            } else if (draggedItemCenter.y > firstListBounds.top && draggedItemCenter.x > firstListBounds.left) {
                                 onTaskDragged(it, 0, 0)
                             }
                         }
@@ -289,7 +305,7 @@ fun Matrix(
                     color = extendedDark.quadrant2.colorContainer,
                     onDragStart = { task, taskOffset ->
                         draggedItem = task
-                        offset = taskOffset
+                        offset = boxOffset?.screenToLocal(taskOffset) ?: Offset.Zero
                     },
                     onDrag = { change, dragAmount ->
                         change.consume()
@@ -297,13 +313,13 @@ fun Matrix(
                     },
                     onDragEnd = {
                         draggedItem?.let {
-                            if (offset.y < firstListBounds.bottom && offset.x < firstListBounds.right) {
+                            if (draggedItemCenter.y < firstListBounds.bottom && draggedItemCenter.x < firstListBounds.right) {
                                 onTaskDragged(it, 10, 10)
-                            } else if (offset.y < firstListBounds.bottom && offset.x > firstListBounds.left) {
+                            } else if (draggedItemCenter.y < firstListBounds.bottom && draggedItemCenter.x > firstListBounds.left) {
                                 onTaskDragged(it, 10, 0)
-                            } else if (offset.y > firstListBounds.top && offset.x < firstListBounds.right) {
+                            } else if (draggedItemCenter.y > firstListBounds.top && draggedItemCenter.x < firstListBounds.right) {
                                 onTaskDragged(it, 0, 10)
-                            } else if (offset.y > firstListBounds.top && offset.x > firstListBounds.left) {
+                            } else if (draggedItemCenter.y > firstListBounds.top && draggedItemCenter.x > firstListBounds.left) {
                                 onTaskDragged(it, 0, 0)
                             }
                         }
@@ -331,7 +347,7 @@ fun Matrix(
                     color = extendedDark.quadrant3.colorContainer,
                     onDragStart = { task, taskOffset ->
                         draggedItem = task
-                        offset = taskOffset
+                        offset = boxOffset?.screenToLocal(taskOffset) ?: Offset.Zero
                     },
                     onDrag = { change, dragAmount ->
                         change.consume()
@@ -339,13 +355,13 @@ fun Matrix(
                     },
                     onDragEnd = {
                         draggedItem?.let {
-                            if (offset.y < firstListBounds.bottom && offset.x < firstListBounds.right) {
+                            if (draggedItemCenter.y < firstListBounds.bottom && draggedItemCenter.x < firstListBounds.right) {
                                 onTaskDragged(it, 10, 10)
-                            } else if (offset.y < firstListBounds.bottom && offset.x > firstListBounds.left) {
+                            } else if (draggedItemCenter.y < firstListBounds.bottom && draggedItemCenter.x > firstListBounds.left) {
                                 onTaskDragged(it, 10, 0)
-                            } else if (offset.y > firstListBounds.top && offset.x < firstListBounds.right) {
+                            } else if (draggedItemCenter.y > firstListBounds.top && draggedItemCenter.x < firstListBounds.right) {
                                 onTaskDragged(it, 0, 10)
-                            } else if (offset.y > firstListBounds.top && offset.x > firstListBounds.left) {
+                            } else if (draggedItemCenter.y > firstListBounds.top && draggedItemCenter.x > firstListBounds.left) {
                                 onTaskDragged(it, 0, 0)
                             }
                         }
@@ -368,7 +384,7 @@ fun Matrix(
                     color = extendedDark.quadrant4.colorContainer,
                     onDragStart = { task, taskOffset ->
                         draggedItem = task
-                        offset = taskOffset
+                        offset = boxOffset?.screenToLocal(taskOffset) ?: Offset.Zero
                     },
                     onDrag = { change, dragAmount ->
                         change.consume()
@@ -376,13 +392,13 @@ fun Matrix(
                     },
                     onDragEnd = {
                         draggedItem?.let {
-                            if (offset.y < firstListBounds.bottom && offset.x < firstListBounds.right) {
+                            if (draggedItemCenter.y < firstListBounds.bottom && draggedItemCenter.x < firstListBounds.right) {
                                 onTaskDragged(it, 10, 10)
-                            } else if (offset.y < firstListBounds.bottom && offset.x > firstListBounds.left) {
+                            } else if (draggedItemCenter.y < firstListBounds.bottom && draggedItemCenter.x > firstListBounds.left) {
                                 onTaskDragged(it, 10, 0)
-                            } else if (offset.y > firstListBounds.top && offset.x < firstListBounds.right) {
+                            } else if (draggedItemCenter.y > firstListBounds.top && draggedItemCenter.x < firstListBounds.right) {
                                 onTaskDragged(it, 0, 10)
-                            } else if (offset.y > firstListBounds.top && offset.x > firstListBounds.left) {
+                            } else if (draggedItemCenter.y > firstListBounds.top && draggedItemCenter.x > firstListBounds.left) {
                                 onTaskDragged(it, 0, 0)
                             }
                         }
@@ -396,8 +412,14 @@ fun Matrix(
         draggedItem?.let {
             Box(
                 modifier = Modifier
+                    .width(with(density) { size.width.toDp() })
                     .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
                     .pointerInput(Unit) { detectDragGestures { _, dragAmount -> offset += dragAmount } }
+                    .onGloballyPositioned { coordinates ->
+                        val rect = coordinates.boundsInWindow()
+                        draggedItemCenter = Offset((rect.left + rect.right)/2, (rect.top + rect.bottom)/2)
+                        Log.i("mytag", rect.toString())
+                    }
                     .background(MaterialTheme.colorScheme.surfaceContainer)
             ) {
                 Row(

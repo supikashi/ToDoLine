@@ -1,7 +1,9 @@
 package com.spksh.todoline.ui.screens
 
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,7 +11,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
@@ -72,7 +76,15 @@ fun StatisticsScreen(
         ) {
             DateRangePicker(
                 onDatesSelected = { start, end ->
-                    if (start != null && end != null) {
+                    if (start != null && end == null) {
+                        scope.launch {
+                            statistics = viewModel.statisticsFeatures.getStatistics(start, start).await()
+                        }
+                    } else if (start == null && end != null) {
+                        scope.launch {
+                            statistics = viewModel.statisticsFeatures.getStatistics(end, end).await()
+                        }
+                    } else if (start != null && end != null) {
                         scope.launch {
                             statistics = viewModel.statisticsFeatures.getStatistics(start, end).await()
                         }
@@ -109,26 +121,39 @@ fun StatisticsScreen(
                                 .size(128.dp)
                         )
                         Column(
-                            modifier = Modifier.height(128.dp),
+                            modifier = Modifier.height(128.dp)
+                                .verticalScroll(rememberScrollState()),
                             verticalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = stringResource(R.string.total_tasks_done, it.totalTasksDone)
+                                text = stringResource(R.string.total_tasks_done, it.totalTasksDone),
                             )
-                            Text(
-                                text = "Quadrant 1: ${it.totalQuadrant1TasksDone}",
+                            TextRow(
+                                text = stringResource(
+                                    R.string.quadrant_1,
+                                    it.totalQuadrant1TasksDone
+                                ),
                                 color = extendedDark.quadrant1.colorContainer
                             )
-                            Text(
-                                text = "Quadrant 2: ${it.totalQuadrant2TasksDone}",
+                            TextRow(
+                                text = stringResource(
+                                    R.string.quadrant_2,
+                                    it.totalQuadrant2TasksDone
+                                ),
                                 color = extendedDark.quadrant2.colorContainer
                             )
-                            Text(
-                                text = "Quadrant 3: ${it.totalQuadrant3TasksDone}",
+                            TextRow(
+                                text = stringResource(
+                                    R.string.quadrant_3,
+                                    it.totalQuadrant3TasksDone
+                                ),
                                 color = extendedDark.quadrant3.colorContainer
                             )
-                            Text(
-                                text = "Quadrant 4: ${it.totalQuadrant4TasksDone}",
+                            TextRow(
+                                text = stringResource(
+                                    R.string.quadrant_4,
+                                    it.totalQuadrant4TasksDone
+                                ),
                                 color = extendedDark.quadrant4.colorContainer
                             )
                         }
@@ -154,26 +179,42 @@ fun StatisticsScreen(
                                 .size(128.dp)
                         )
                         Column(
-                            modifier = Modifier.height(128.dp),
+                            modifier = Modifier.height(128.dp)
+                                .verticalScroll(rememberScrollState()),
                             verticalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "Total Time Spent: ${it.totalProgressMinutes}"
+                                text = stringResource(
+                                    R.string.total_time_spent,
+                                    getStringTime(it.totalProgressMinutes)
+                                ),
                             )
-                            Text(
-                                text = "Quadrant 1: ${it.totalQuadrant1ProgressMinutes}",
+                            TextRow(
+                                text = stringResource(
+                                    R.string.quadrant_1,
+                                    getStringTime(it.totalQuadrant1ProgressMinutes)
+                                ),
                                 color = extendedDark.quadrant1.colorContainer
                             )
-                            Text(
-                                text = "Quadrant 2: ${it.totalQuadrant2ProgressMinutes}",
+                            TextRow(
+                                text = stringResource(
+                                    R.string.quadrant_2,
+                                    getStringTime(it.totalQuadrant2ProgressMinutes)
+                                ),
                                 color = extendedDark.quadrant2.colorContainer
                             )
-                            Text(
-                                text = "Quadrant 3: ${it.totalQuadrant3ProgressMinutes}",
+                            TextRow(
+                                text = stringResource(
+                                    R.string.quadrant_3,
+                                    getStringTime(it.totalQuadrant3ProgressMinutes)
+                                ),
                                 color = extendedDark.quadrant3.colorContainer
                             )
-                            Text(
-                                text = "Quadrant 4: ${it.totalQuadrant4ProgressMinutes}",
+                            TextRow(
+                                text = stringResource(
+                                    R.string.quadrant_4,
+                                    getStringTime(it.totalQuadrant4ProgressMinutes)
+                                ),
                                 color = extendedDark.quadrant4.colorContainer
                             )
                         }
@@ -201,9 +242,9 @@ fun StatisticsScreen(
                         ) {
                             it.tagsTotalTasksDone.forEach {
                                 val tag = viewModel.findTagById(it.first) ?: Tag()
-                                Text(
+                                TextRow(
                                     text = "${tag.name}: ${it.second}",
-                                    color =  Color(android.graphics.Color.parseColor(tag.color))
+                                    color = Color(android.graphics.Color.parseColor(tag.color))
                                 )
                             }
                         }
@@ -231,17 +272,46 @@ fun StatisticsScreen(
                         ) {
                             it.tagsTotalProgressMinutes.forEach {
                                 val tag = viewModel.findTagById(it.first) ?: Tag()
-                                Text(
-                                    text = "${tag.name}: ${it.second}",
-                                    color =  Color(android.graphics.Color.parseColor(tag.color))
+                                TextRow(
+                                    text = "${tag.name}: ${getStringTime(it.second)}",
+                                    color = Color(android.graphics.Color.parseColor(tag.color))
                                 )
                             }
                         }
                     }
                 }
-
             }
         }
+    }
+}
 
+private fun getStringTime(time: Int) = "${time / 60}:" +
+        "${
+            if (time % 60 < 10) 
+                "0${time % 60}"
+            else
+                time % 60
+        }"
+
+@Composable
+fun TextRow(
+    text: String,
+    color: Color
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(16.dp)
+                .background(
+                    color = color,
+                    shape = CircleShape
+                )
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = text,
+        )
     }
 }

@@ -1,12 +1,17 @@
 package com.spksh.todoline.ui
 
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
+import android.content.res.Configuration
+import android.content.res.Resources
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.background
-
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -19,13 +24,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -37,6 +48,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navigation
+import com.spksh.todoline.data.DataStoreRepository
+import com.spksh.todoline.di.DatabaseModule
+import com.spksh.todoline.domain.Settings.GetSettingsFlowUseCase
 import com.spksh.todoline.ui.screens.CalendarScreen
 import com.spksh.todoline.ui.screens.EventScreen
 import com.spksh.todoline.ui.screens.MatrixScreen
@@ -46,17 +60,66 @@ import com.spksh.todoline.ui.screens.StatisticsScreen
 import com.spksh.todoline.ui.screens.TaskScreen
 import com.spksh.todoline.ui.screens.TimeSlotScreen
 import com.spksh.todoline.ui.theme.AppTheme
+import com.spksh.todoline.ui.theme.backgroundDark
+import com.spksh.todoline.ui.theme.backgroundLight
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
 import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.flow.cancellable
+import kotlinx.coroutines.flow.count
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.lastOrNull
+import kotlinx.coroutines.runBlocking
+import java.util.Locale
+import javax.inject.Inject
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface DataStoreRepositoryEntryPoint {
+    fun getDataStoreRepository(): DataStoreRepository
+}
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    private val viewModel: MainViewModel by viewModels()
+
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(applySelectedAppLanguage(base))
+    }
+
+    private fun applySelectedAppLanguage(context: Context): Context {
+
+        val dataStoreRepository = EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            DataStoreRepositoryEntryPoint::class.java
+        ).getDataStoreRepository()
+        val language = runBlocking { dataStoreRepository.getLanguage() ?: true }
+        val locale = Locale(if (language) "en" else "ru")
+        val newConfig = Configuration(context.resources.configuration)
+        Locale.setDefault(locale)
+        newConfig.setLocale(locale)
+        return context.createConfigurationContext(newConfig)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.i("mytag", "recreate activity")
+        val dataStoreRepository = EntryPointAccessors.fromApplication(
+            this.applicationContext,
+            DataStoreRepositoryEntryPoint::class.java
+        ).getDataStoreRepository()
+        val theme = runBlocking { dataStoreRepository.settingsDataFlow.firstOrNull()?.isDarkTheme ?: true }
         enableEdgeToEdge()
         setContent {
             Log.i("mytag", "set content")
-            ToDoLineApp()
+            AppTheme(
+                darkTheme = theme
+            ) {
+                ToDoLineApp(mainViewModel = viewModel, theme)
+            }
         }
     }
 }
@@ -64,9 +127,11 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun ToDoLineApp(
     mainViewModel: MainViewModel = viewModel(),
+    isDarkTheme: Boolean = true,
     navController: NavHostController = rememberNavController()
 ) {
     val uiState by mainViewModel.uiState.collectAsStateWithLifecycle()
+
     LaunchedEffect(Unit) {
         mainViewModel.navigationEvents.collect { event ->
             when (event) {
@@ -100,11 +165,15 @@ fun ToDoLineApp(
             }
         }
     }
+    var color by remember { mutableStateOf<Color?>(null) }
+    LaunchedEffect(isDarkTheme) {
+        color = if (isDarkTheme) backgroundDark else backgroundLight
+    }
     Log.i("mytag", "app recomp")
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    AppTheme(
-        darkTheme = uiState.settings.isDarkTheme
-    ) {
+    //AppTheme(
+   //     darkTheme = uiState.settings.isDarkTheme
+    //) {
         Scaffold(
             bottomBar = {
                 BottomBar(
@@ -114,7 +183,8 @@ fun ToDoLineApp(
                     openSettingsScreen = {mainViewModel.openSettingsScreen()}
                 )
             },
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            containerColor = color ?: MaterialTheme.colorScheme.primary,
         ) { innerPadding ->
             NavHost(
                 navController = navController,
@@ -122,7 +192,7 @@ fun ToDoLineApp(
                 modifier = Modifier
                     .padding(innerPadding)
                     .fillMaxSize()
-                    .background(color = MaterialTheme.colorScheme.background)
+                    //.background(color = MaterialTheme.colorScheme.background)
             ) {
                 Log.i("mytag", "navhost recomp")
                 composable(route = "matrix") {
@@ -194,7 +264,7 @@ fun ToDoLineApp(
                 }
             }
         }
-    }
+    //}
 }
 
 @Composable

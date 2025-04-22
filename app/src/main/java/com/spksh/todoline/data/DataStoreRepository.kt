@@ -7,6 +7,8 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -17,6 +19,7 @@ class DataStoreRepository @Inject constructor(
 ) {
 
     private val Context.dataStore by preferencesDataStore(name = "settings")
+    //private val Context.dataStore2 by preferencesDataStore(name = "l")
 
     private val tasksOrderKey = stringPreferencesKey("tasks_order")
     private val showTaskWithoutTags = stringPreferencesKey("show_task_with_out_tags")
@@ -92,6 +95,8 @@ class DataStoreRepository @Inject constructor(
             preferences[language] = if (!check) "0" else "1"
         }
     }
+
+    suspend fun getLanguage() = context.dataStore.data.map { it[language] != "0" }.firstOrNull()
 
     suspend fun saveTheme(check: Boolean) {
         context.dataStore.edit { preferences ->

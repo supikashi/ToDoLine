@@ -66,9 +66,9 @@ fun ScheduleSettingsScreen(
                 timeSlots = uiState.timeSlots,
                 tags = uiState.tags,
             )
-            val days = listOf(stringResource(R.string.m),
-                stringResource(R.string.t), stringResource(R.string.w),
-                stringResource(R.string.thursday), stringResource(R.string.f),
+            val days = listOf(stringResource(R.string.monday),
+                stringResource(R.string.tuesday), stringResource(R.string.wednesday),
+                stringResource(R.string.thursday), stringResource(R.string.friday),
                 stringResource(R.string.saturday), stringResource(R.string.sunday)
             )
             Row(
@@ -114,7 +114,7 @@ fun ScheduleSettingsScreen(
             }
         }
         FloatingActionButton(
-            onClick = { viewModel.timeSlotFeatures.add(TimeSlotUiModel(startTime = 540, endTime = 600)) },
+            onClick = { viewModel.timeSlotFeatures.add(TimeSlotUiModel()) },
             modifier = Modifier
                 .padding(16.dp)
                 .align(Alignment.BottomEnd)

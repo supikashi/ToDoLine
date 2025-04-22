@@ -19,8 +19,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.spksh.todoline.R
 import com.spksh.todoline.data.Tag.Tag
 
 @Composable
@@ -59,7 +61,7 @@ fun TagItem(
             onDismissRequest = { showDeleteButton = false }
         ) {
             DropdownMenuItem(
-                text = {Text("Delete")},
+                text = {Text(stringResource(R.string.delete))},
                 onClick = {
                     onDelete()
                     showDeleteButton = false

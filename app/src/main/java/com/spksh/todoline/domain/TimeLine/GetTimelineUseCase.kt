@@ -48,10 +48,11 @@ class GetTimelineUseCase @Inject constructor(
                     )
                 )
             }
+        val idToIndexMap: Map<Long, Int> = tasks.mapIndexed { index, task -> Pair(task.first.id, index) }.toMap()
         var taskIndex = 0
         val tmpActivityList: MutableList<MutableList<ActivityUiModel>> = mutableListOf()
         val tmpTasks: MutableList<Pair<Pair<TaskUiModel, Long>, Int>> = mutableListOf()
-        val usedTasks = MutableList(tasks.size) { false }
+        val usedTasks = MutableList(tasks.size) { 0 }
         var currentDate = startTime.toLocalDate()
         var freeTime = listOf<FreeTime>()
         var eventIndex = 0
@@ -59,26 +60,18 @@ class GetTimelineUseCase @Inject constructor(
         var f = getFreeTime(startTime, timeSlots, eventActivities, eventIndex)
         eventIndex = f.second
         freeTime = f.first
-
-        var prevTaskIndex = taskIndex
-        var prevTmpTasks = tmpTasks
-        var cnt = 0
-
-        while (taskIndex != tasks.size || tmpTasks.isNotEmpty()) {
-            taskIndex = addTimelinedTasks(timelinedTasks, tmpActivityList, tmpTasks, freeTime, tasks, usedTasks, taskIndex)
-            if (prevTaskIndex == taskIndex) {
-                cnt++
-            } else {
-                cnt = 0
+        if (timeSlots.filter { it.startTime != it.endTime }.all { it.tagId != 0L}) {
+            val set = timeSlots.filter { it.startTime != it.endTime }.map { it.tagId }.toSet()
+            if (!tasks.all { it.first.tagsIds.any { set.contains(it) } }) {
+                return null
             }
-            prevTaskIndex = taskIndex
+        }
+        while (taskIndex != tasks.size || tmpTasks.isNotEmpty()) {
+            taskIndex = addTimelinedTasks(timelinedTasks, tmpActivityList, tmpTasks, freeTime, tasks, usedTasks, taskIndex, idToIndexMap)
             currentDate = currentDate.plusDays(1)
             f = getFreeTime(currentDate.atStartOfDay(), timeSlots, eventActivities, eventIndex)
             eventIndex = f.second
             freeTime = f.first
-            if (cnt > 8) {
-                return null
-            }
         }
         val overdueTasks = mutableMapOf<Long, Boolean>()
         timelinedTasks.forEach {
@@ -109,8 +102,9 @@ class GetTimelineUseCase @Inject constructor(
         tmpTasks: MutableList<Pair<Pair<TaskUiModel, Long>, Int>>,
         freeTime: List<FreeTime>,
         tasks: List<Pair<TaskUiModel,Long>>,
-        usedTasks: MutableList<Boolean>,
-        startIndex: Int
+        usedTasks: MutableList<Int>,
+        startIndex: Int,
+        idToIndexMap: Map<Long, Int>
     ) : Int {
         var taskIndex = startIndex
 
@@ -120,12 +114,13 @@ class GetTimelineUseCase @Inject constructor(
                 break
             }
             while (tmpStart.isBefore(time.endTime)) {
-                while (taskIndex != usedTasks.size && usedTasks[taskIndex]) {
+                while (taskIndex != usedTasks.size && usedTasks[taskIndex] > 0) {
                     taskIndex++
                 }
                 var suitableTaskIndex: Int? = null
                 for (i in taskIndex until tasks.size) {
-                    if (!usedTasks[i] && (time.tagId == 0L || time.tagId in tasks[i].first.tagsIds)) {
+                    if (usedTasks[i] == 0 && (time.tagId == 0L || time.tagId in tasks[i].first.tagsIds)
+                        && (tasks[i].first.parentTaskId == null || idToIndexMap[tasks[i].first.parentTaskId]?.let {usedTasks[it] == 2} != false)) {
                         suitableTaskIndex = i
                         break
                     }
@@ -175,13 +170,14 @@ class GetTimelineUseCase @Inject constructor(
                                 isDeadlineMet = tmpTask.first.deadlineLocal?.let {!it.isBefore(tmpEnd)} ?: true
                             )
                         })
+                        usedTasks[tmpTasks[i].second] = 2
                         tmpTasks.removeAt(i)
                         tmpActivityList.removeAt(i)
                         tmpStart = tmpEnd
                     }
                 } else if (suitableTaskIndex != null) {
                     val i = suitableTaskIndex
-                    usedTasks[i] = true
+                    usedTasks[i] = 1
                     val tmpEnd = tmpStart.plusMinutes(tasks[i].first.requiredTime.toLong())
                     if (tmpEnd.isAfter(time.endTime)) {
                         tmpActivityList.add(mutableListOf(ActivityUiModel(
@@ -195,6 +191,7 @@ class GetTimelineUseCase @Inject constructor(
                         tmpTasks.add(Pair(tasks[i].copy(first = tasks[i].first.copy(requiredTime = timeRemaining)), i))
                         tmpStart = time.endTime
                     } else {
+                        usedTasks[i] = 2
                         timelinedTasks.add(
                             ActivityUiModel(
                                 isTask = true,

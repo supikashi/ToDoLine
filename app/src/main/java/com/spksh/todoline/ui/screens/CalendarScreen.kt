@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -99,6 +100,9 @@ fun CalendarScreen(
 
     val interactionSource = remember { MutableInteractionSource() }
     val context = LocalContext.current
+    val today = LocalDate.now()
+    val listItems = uiState.tasksAndEventsByDays.toList().sortedBy { it.first }
+    val listState = rememberLazyListState(listItems.sumOf { if (it.first.isBefore(today)) it.second.size + 1 else 0 })
     Box {
         Column {
             Row(
@@ -131,7 +135,7 @@ fun CalendarScreen(
                 }
             }
             val pageCount = 1000
-            val initialDate = remember { LocalDate.now() }
+            val initialDate = remember { today }
             val pagerState = rememberPagerState(
                 initialPage = pageCount / 2,
                 pageCount = {pageCount}
@@ -176,10 +180,11 @@ fun CalendarScreen(
                 }
             } else {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    uiState.tasksAndEventsByDays.toList().sortedBy { it.first }.forEach { activity ->
+                    listItems.forEach { activity ->
                         item { Text(activity.first.format(DateTimeFormatter.ofPattern("d MMMM yyyy"))) }
                         items(activity.second) { item ->
                             ActivityItem(
@@ -275,45 +280,43 @@ fun CalendarScreen(
                     .padding(horizontal = 16.dp)
                     .fillMaxWidth()
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                Button(
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally),
+                    onClick = {
+                        scope.launch {
+                            val res = viewModel.timelineFeatures.getTimelineByImportance(uiState.tasks).await()
+                            if (res == null) {
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.bad_schedule),
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            } else {
+                                tasksWithBadDeadline.clear()
+                                tasksWithBadDeadline.addAll(res)
+                                openOverdueBottomSheet = tasksWithBadDeadline.isNotEmpty()
+                            }
+                        }
+                    },
                 ) {
-                    Button(
-                        onClick = {
-                            scope.launch {
-                                val res = viewModel.timelineFeatures.getTimelineByImportance(uiState.tasks).await()
-                                if (res == null) {
-                                    Toast.makeText(
-                                        context,
-                                        "Bad Schedule",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                } else {
-                                    tasksWithBadDeadline.clear()
-                                    tasksWithBadDeadline.addAll(res)
-                                    openOverdueBottomSheet = tasksWithBadDeadline.isNotEmpty()
+                    Text(text = stringResource(R.string.promote_important_tasks))
+                }
+                Button(
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally),
+                    onClick = {
+                        scope
+                            .launch { overdueBottomSheetState.hide() }
+                            .invokeOnCompletion {
+                                if (!overdueBottomSheetState.isVisible) {
+                                    openOverdueBottomSheet = false
                                 }
                             }
-                        },
-                    ) {
-                        Text(text = stringResource(R.string.promote_important_tasks))
-                    }
-                    Button(
-                        onClick = {
-                            scope
-                                .launch { overdueBottomSheetState.hide() }
-                                .invokeOnCompletion {
-                                    if (!overdueBottomSheetState.isVisible) {
-                                        openOverdueBottomSheet = false
-                                    }
-                                }
-                            openCustomTaskOrderBottomSheet = true
-                        },
-                    ) {
-                        Text(text = stringResource(R.string.set_custom_order))
-                    }
-
+                        openCustomTaskOrderBottomSheet = true
+                    },
+                ) {
+                    Text(text = stringResource(R.string.set_custom_order))
                 }
                 Text(
                     text = stringResource(R.string.potentially_overdue_tasks),

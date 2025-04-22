@@ -15,13 +15,22 @@ class UpdateEventUseCase @Inject constructor(
     private val deleteAllByIdUseCase: DeleteAllByIdUseCase
 ) {
     suspend operator fun invoke(event: Event, oldEvent: Event?, zoneId: ZoneId) {
-        if (event.startTime < event.endTime) {
-            oldEvent?.let {
-                eventRepository.update(event)
-                if (it.startTime != event.startTime || it.endTime != event.endTime) {
-                    deleteAllByIdUseCase(event.id, false)
-                    addAllActivitiesUseCase(getActivitiesByEventUseCase(event, zoneId))
+        oldEvent?.let {
+            var correctEvent = event
+            if (event.startTime != it.startTime) {
+                if (event.startTime >= event.endTime) {
+                    correctEvent = correctEvent.copy(endTime = event.startTime + it.endTime - it.startTime)
                 }
+            }
+            if (event.endTime != it.endTime) {
+                if (event.startTime >= event.endTime) {
+                    correctEvent = correctEvent.copy(startTime = event.endTime - it.endTime + it.startTime)
+                }
+            }
+            eventRepository.update(correctEvent)
+            if (it.startTime != correctEvent.startTime || it.endTime != correctEvent.endTime) {
+                deleteAllByIdUseCase(correctEvent.id, false)
+                addAllActivitiesUseCase(getActivitiesByEventUseCase(correctEvent, zoneId))
             }
         }
     }

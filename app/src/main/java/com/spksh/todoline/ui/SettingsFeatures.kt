@@ -1,5 +1,9 @@
 package com.spksh.todoline.ui
 
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
+import android.os.Bundle
 import com.spksh.todoline.domain.Settings.SetLanguageUseCase
 import com.spksh.todoline.domain.Settings.SetShowCompletedTasksUseCase
 import com.spksh.todoline.domain.Settings.SetShowMonthTasksUseCase
@@ -53,16 +57,32 @@ class SettingsFeatures @AssistedInject constructor(
         }
     }
 
-    fun setTheme(check: Boolean) {
+    fun setTheme(check: Boolean, context: Context) {
         scope.launch {
             setThemeUseCase(check)
+            if (context is Activity) {
+                restartActivity(context)
+            }
         }
     }
 
-    fun setLanguage(check: Boolean) {
+    fun setLanguage(check: Boolean, context: Context) {
         scope.launch {
             setLanguageUseCase(check)
+            if (context is Activity) {
+                restartActivity(context)
+            }
         }
+    }
+
+    private fun restartActivity(activity: Activity) {
+        val intent = Intent(activity, activity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            putExtras(activity.intent?.extras ?: Bundle())
+        }
+
+        activity.finish()
+        activity.startActivity(intent)
     }
 
     @AssistedFactory

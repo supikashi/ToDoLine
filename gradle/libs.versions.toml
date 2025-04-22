@@ -2,6 +2,7 @@
 agp = "8.8.0"
 androidxRoomCompiler = "2.6.1"
 datastorePreferences = "1.1.2"
+googleAccompanistSystemuicontroller = "<version>"
 hiltAndroid = "2.51.1"
 kotlin = "2.0.0"
 coreKtx = "1.15.0"
@@ -29,6 +30,7 @@ androidx-room-compiler-v250 = { module = "androidx.room:room-compiler", version.
 androidx-room-compiler-v261 = { module = "androidx.room:room-compiler", version.ref = "androidxRoomCompiler" }
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "roomRuntime" }
 androidx-ui-text-google-fonts = { module = "androidx.compose.ui:ui-text-google-fonts", version.ref = "uiTextGoogleFontsVersion" }
+google-accompanist-systemuicontroller = { module = "com.google.accompanist:accompanist-systemuicontroller", version.ref = "googleAccompanistSystemuicontroller" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hiltAndroid" }
 hilt-android-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hiltAndroid" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }

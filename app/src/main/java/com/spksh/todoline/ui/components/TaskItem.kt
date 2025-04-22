@@ -21,16 +21,16 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInParent
-import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.layout.positionOnScreen
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import com.spksh.todoline.data.Task.Task
 import com.spksh.todoline.ui.model.TaskUiModel
-import com.spksh.todoline.ui.theme.ExtendedColorScheme
 import com.spksh.todoline.ui.theme.extendedDark
 import java.time.LocalDateTime
 
@@ -45,13 +45,22 @@ fun TaskItem(
     onDragEnd: () -> Unit = {},
     draggedItem: TaskUiModel? = null
 ) {
-    var elementOffset by remember { mutableStateOf<Offset>(Offset(0f, 0f)) }
+    var screenCoordinates by remember { mutableStateOf(Offset.Zero) }
+    var elementSize by remember { mutableStateOf(IntSize.Zero) }
+    var layoutCoordinates: LayoutCoordinates? by remember { mutableStateOf(null) }
     Box(
         modifier = Modifier
             .pointerInput(Unit) {
                 detectDragGesturesAfterLongPress(
                     onDragStart = {
-                        onDragStart(task, elementOffset)
+                        val screenPosition = layoutCoordinates?.localToScreen(it.copy(
+                            x = it.x - elementSize.width / 2f,
+                            y = it.y - elementSize.height / 2f,
+                        ))
+                        screenPosition?.let {
+                            screenCoordinates = Offset(it.x, it.y)
+                        }
+                        onDragStart(task, screenCoordinates)
                     },
                     onDrag = { change, dragAmount ->
                         onDrag(change, dragAmount)
@@ -62,9 +71,10 @@ fun TaskItem(
                 )
             }
             .alpha(if (draggedItem?.id == task.id) 0.0f else 1f)
-            .onGloballyPositioned { coordinates ->
-                elementOffset = coordinates.positionInWindow()
-                elementOffset = elementOffset.copy(y = elementOffset.y - 200f)
+            .onGloballyPositioned {
+                layoutCoordinates = it
+                elementSize = it.size
+                //elementOffset = Offset(coordinates.boundsInRoot().left, coordinates.boundsInRoot().top)
             }
     ) {
         Row(

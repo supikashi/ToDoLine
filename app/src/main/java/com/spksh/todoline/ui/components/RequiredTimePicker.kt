@@ -12,7 +12,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import java.time.LocalTime
+import androidx.compose.ui.res.stringResource
+import com.spksh.todoline.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,7 +32,7 @@ fun RequiredTimePicker(
     TextButton(
         onClick = {showDialog = true}
     ) {
-        Text(if (requiredTime == 0) "Choose Time" else strTime)
+        Text(if (requiredTime == 0) stringResource(R.string.choose_time) else strTime)
     }
     if (showDialog) {
         val timePickerState = rememberTimePickerState(
@@ -41,7 +42,7 @@ fun RequiredTimePicker(
         )
         AlertDialog(
             onDismissRequest = { showDialog = false },
-            title = { Text("Choose Required Time") },
+            title = { Text(stringResource(R.string.choose_required_time)) },
             text = {
                 TimeInput(state = timePickerState)
             },
@@ -52,7 +53,7 @@ fun RequiredTimePicker(
                         onTimeSelected(60 * timePickerState.hour + timePickerState.minute)
                     }
                 ) {
-                    Text("OK")
+                    Text(stringResource(R.string.ok))
                 }
             },
             dismissButton = {
@@ -61,7 +62,7 @@ fun RequiredTimePicker(
                         showDialog = false
                     }
                 ) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )

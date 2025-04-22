@@ -1,9 +1,7 @@
 package com.spksh.todoline.ui.components
 
-import android.app.TimePickerDialog
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
@@ -18,7 +16,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TimeInput
-import androidx.compose.material3.TimePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -28,8 +25,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import com.spksh.todoline.R
 import com.spksh.todoline.data.Task.SubTask
 
 @Composable
@@ -75,7 +73,7 @@ fun SubTaskItem(
                 name = newName
                 onNameChange(newName)
             },
-            placeholder = {Text("Subtask Name")},
+            placeholder = {Text(stringResource(R.string.subtask_name))},
             singleLine = true,
             //suffix = {Text(" $strTime")},
             colors = TextFieldDefaults.colors(
@@ -100,21 +98,21 @@ fun SubTaskItem(
                 onDismissRequest = {expanded = false},
             ) {
                 DropdownMenuItem(
-                    text = { Text("Change Progress") },
+                    text = { Text(stringResource(R.string.change_progress)) },
                     onClick = {
                         expanded = false
                         showProgressDialog = true
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("Change Required Time") },
+                    text = { Text(stringResource(R.string.change_required_time)) },
                     onClick = {
                         expanded = false
                         showRequiredTimeDialog = true
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("Delete") },
+                    text = { Text(stringResource(R.string.delete)) },
                     onClick = {
                         expanded = false
                         onDelete()
@@ -126,7 +124,7 @@ fun SubTaskItem(
     if (showProgressDialog) {
         TimePickerDialog(
             initialTime = subTask.progress,
-            title = "Choose Progress",
+            title = stringResource(R.string.choose_progress),
             onDismiss = {showProgressDialog = false},
             onTimeSelected = {onProgressSelected(it)}
         )
@@ -134,7 +132,7 @@ fun SubTaskItem(
     if (showRequiredTimeDialog) {
         TimePickerDialog(
             initialTime = subTask.progress,
-            title = "Choose Required Time",
+            title = stringResource(R.string.choose_required_time),
             onDismiss = {showRequiredTimeDialog = false},
             onTimeSelected = {onRequiredTimeSelected(it)}
         )
@@ -167,14 +165,14 @@ fun TimePickerDialog(
                     onTimeSelected(60 * timePickerState.hour + timePickerState.minute)
                 }
             ) {
-                Text("OK")
+                Text(stringResource(R.string.ok))
             }
         },
         dismissButton = {
             Button(
                 onClick = onDismiss
             ) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )

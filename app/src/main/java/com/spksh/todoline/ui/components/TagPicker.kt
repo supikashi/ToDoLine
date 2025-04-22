@@ -24,7 +24,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -36,7 +35,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.spksh.todoline.R
 import com.spksh.todoline.data.Tag.Tag
 
 @Composable
@@ -56,7 +57,7 @@ fun TagPicker(
         TextButton(
             onClick = {showDialog = true}
         ) {
-            Text("Choose Tags")
+            Text(stringResource(R.string.choose_tags))
         }
     } else {
         LazyRow(
@@ -84,14 +85,14 @@ fun TagPicker(
                 showDialog = false
                 onDismiss()
             },
-            title = { Text("Choose Tags") },
+            title = { Text(stringResource(R.string.choose_tags)) },
             text = {
                 Column {
                     OutlinedTextField(
                         value = newTagName,
                         singleLine = true,
                         onValueChange = { newTagName = it },
-                        label = { Text("Tag name") }
+                        label = { Text(stringResource(R.string.tag_name)) }
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -141,7 +142,7 @@ fun TagPicker(
                             }
                         }
                     ) {
-                        Text("Create Tag")
+                        Text(stringResource(R.string.create_tag))
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -165,7 +166,7 @@ fun TagPicker(
                         onDismiss()
                     }
                 ) {
-                    Text("OK")
+                    Text(stringResource(R.string.ok))
                 }
             }
         )

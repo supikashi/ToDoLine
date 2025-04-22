@@ -23,8 +23,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.spksh.todoline.R
 import com.spksh.todoline.ui.model.ActivityUiModel
 import com.spksh.todoline.ui.model.EventUiModel
 import com.spksh.todoline.ui.model.TaskUiModel
@@ -160,13 +162,14 @@ fun TaskActivityItem(
                 modifier = Modifier.align(Alignment.Top)
             )
             Column(
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
                     .fillMaxHeight()
                     .padding(vertical = 8.dp)
                     .padding(end = 16.dp)
             ) {
                 val dayText = if (activity.numberOfParts != 1) {
-                    " (Part ${activity.partIndex}/${activity.numberOfParts})"
+                    stringResource(R.string.part, activity.partIndex, activity.numberOfParts)
                 } else {
                     ""
                 }
@@ -180,14 +183,14 @@ fun TaskActivityItem(
                 Text(text = name + dayText)
                 if (activity.subtaskId != 0L) {
                     Text(
-                        text = "Subtask of: ${task?.name}",
+                        text = stringResource(R.string.subtask_of, task?.name ?: ""),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 task?.deadlineText?.let {
                     Text(
-                        text = "Deadline: $it",
+                        text = "${stringResource(R.string.deadline)}: $it",
                         style = MaterialTheme.typography.labelSmall,
                         color = if (activity.isDeadlineMet) {
                             MaterialTheme.colorScheme.onSurfaceVariant

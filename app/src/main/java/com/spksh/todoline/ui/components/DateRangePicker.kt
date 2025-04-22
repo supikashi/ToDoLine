@@ -94,7 +94,7 @@ private fun CalendarMonth(
             .fillMaxWidth()
     ) {
         Text(
-            text = "${yearMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())} ${yearMonth.year}",
+            text = "${yearMonth.month.getDisplayName(TextStyle.FULL_STANDALONE, Locale.getDefault())} ${yearMonth.year}",
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(16.dp)
         )
@@ -103,7 +103,7 @@ private fun CalendarMonth(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceAround
         ) {
-            DayOfWeek.values().forEach { day ->
+            DayOfWeek.entries.forEach { day ->
                 Text(
                     text = day.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
                     fontSize = 12.sp,
@@ -113,7 +113,6 @@ private fun CalendarMonth(
         }
         val today = LocalDate.now()
         Column(modifier = Modifier.padding(top = 8.dp)) {
-            var currentRow = 0
             val rows = 6
             val columns = 7
 
@@ -136,8 +135,8 @@ private fun CalendarMonth(
                             date = date,
                             isToday = date?.isEqual(today) == true,
                             isSelected = isSelected,
-                            isStartDate = date == selectedStartDate,
-                            isEndDate = date == selectedEndDate,
+                            isStartDate = date != null && date == selectedStartDate,
+                            isEndDate = date != null && date == selectedEndDate,
                             onClick = { if (date != null) onDateClicked(date) }
                         )
                     }
@@ -157,6 +156,8 @@ private fun DateCell(
     onClick: () -> Unit
 ) {
     val backgroundColor = when {
+        isStartDate -> MaterialTheme.colorScheme.secondary
+        isEndDate -> MaterialTheme.colorScheme.secondary
         isSelected -> MaterialTheme.colorScheme.primary
         isToday -> MaterialTheme.colorScheme.secondaryContainer
         else -> Color.Transparent
@@ -175,7 +176,7 @@ private fun DateCell(
             Text(
                 text = date.dayOfMonth.toString(),
                 color = when {
-                    isSelected -> MaterialTheme.colorScheme.onPrimary
+                    isSelected || isStartDate || isEndDate -> MaterialTheme.colorScheme.onPrimary
                     isToday -> MaterialTheme.colorScheme.secondary
                     else -> MaterialTheme.colorScheme.onSurface
                 },

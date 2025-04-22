@@ -9,6 +9,7 @@ import com.spksh.todoline.data.Event.EventDao
 import com.spksh.todoline.data.Tag.TagDao
 import com.spksh.todoline.data.TimeLinedActivity.TimeLinedActivityDao
 import com.spksh.todoline.data.TimeSlot.TimeSlotDao
+import com.spksh.todoline.domain.Settings.GetSettingsFlowUseCase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -58,5 +59,11 @@ object DatabaseModule {
     @Singleton
     fun provideTimeSlotDao(database: AppDatabase): TimeSlotDao {
         return database.timeSlotDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideDataStore(dataStoreRepository: DataStoreRepository) : GetSettingsFlowUseCase {
+        return GetSettingsFlowUseCase(dataStoreRepository)
     }
 }
