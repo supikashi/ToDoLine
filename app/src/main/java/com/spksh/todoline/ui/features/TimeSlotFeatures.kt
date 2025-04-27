@@ -1,6 +1,5 @@
-package com.spksh.todoline.ui
+package com.spksh.todoline.ui.features
 
-import com.spksh.todoline.data.TimeSlot.TimeSlot
 import com.spksh.todoline.domain.TimeSlot.AddTimeSlotUseCase
 import com.spksh.todoline.domain.TimeSlot.DeleteTimeSlotUseCase
 import com.spksh.todoline.domain.TimeSlot.UpdateTimeSlotUseCase

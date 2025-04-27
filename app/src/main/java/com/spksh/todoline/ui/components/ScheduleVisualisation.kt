@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -41,7 +43,9 @@ fun ScheduleVisualisation(
                                 .fillMaxWidth()
                                 .offset(y = start.dp)
                                 .height(timeSlotHeight.dp)
+                                .clip(RoundedCornerShape(4.dp))
                                 .background(Color(android.graphics.Color.parseColor(tag.color)))
+
                         )
                     }
                 }

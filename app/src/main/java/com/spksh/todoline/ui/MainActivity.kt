@@ -1,17 +1,13 @@
 package com.spksh.todoline.ui
 
-import android.app.Activity
 import android.content.Context
-import android.content.Intent
 import android.content.res.Configuration
-import android.content.res.Resources
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -24,7 +20,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,9 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -49,13 +42,11 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navigation
 import com.spksh.todoline.data.DataStoreRepository
-import com.spksh.todoline.di.DatabaseModule
-import com.spksh.todoline.domain.Settings.GetSettingsFlowUseCase
 import com.spksh.todoline.ui.screens.CalendarScreen
 import com.spksh.todoline.ui.screens.EventScreen
+import com.spksh.todoline.ui.screens.MainSettingsScreen
 import com.spksh.todoline.ui.screens.MatrixScreen
 import com.spksh.todoline.ui.screens.ScheduleSettingsScreen
-import com.spksh.todoline.ui.screens.MainSettingsScreen
 import com.spksh.todoline.ui.screens.StatisticsScreen
 import com.spksh.todoline.ui.screens.TaskScreen
 import com.spksh.todoline.ui.screens.TimeSlotScreen
@@ -67,13 +58,9 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.flow.cancellable
-import kotlinx.coroutines.flow.count
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.lastOrNull
 import kotlinx.coroutines.runBlocking
 import java.util.Locale
-import javax.inject.Inject
 
 @EntryPoint
 @InstallIn(SingletonComponent::class)

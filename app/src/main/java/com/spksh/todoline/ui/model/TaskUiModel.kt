@@ -3,7 +3,6 @@ package com.spksh.todoline.ui.model
 import com.spksh.todoline.data.Task.SubTask
 import com.spksh.todoline.data.Task.Task
 import java.time.Instant
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter

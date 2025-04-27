@@ -1,6 +1,5 @@
 package com.spksh.todoline.domain.TimelinedActivity
 
-import com.spksh.todoline.data.TimeLinedActivity.TimeLinedActivity
 import com.spksh.todoline.data.TimeLinedActivity.TimeLinedActivityRepository
 import javax.inject.Inject
 

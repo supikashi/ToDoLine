@@ -1,7 +1,6 @@
 package com.spksh.todoline.ui.model
 
 import com.spksh.todoline.data.Tag.Tag
-import com.spksh.todoline.ui.SettingsUi
 import java.time.LocalDate
 import java.time.LocalDateTime
 

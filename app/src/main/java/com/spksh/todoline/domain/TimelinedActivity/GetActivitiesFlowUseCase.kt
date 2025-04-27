@@ -1,7 +1,5 @@
 package com.spksh.todoline.domain.TimelinedActivity
 
-import com.spksh.todoline.data.Event.Event
-import com.spksh.todoline.data.Event.EventRepository
 import com.spksh.todoline.data.TimeLinedActivity.TimeLinedActivity
 import com.spksh.todoline.data.TimeLinedActivity.TimeLinedActivityRepository
 import kotlinx.coroutines.flow.Flow

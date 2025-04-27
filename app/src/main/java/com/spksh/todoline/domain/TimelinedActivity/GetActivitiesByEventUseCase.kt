@@ -3,7 +3,6 @@ package com.spksh.todoline.domain.TimelinedActivity
 import android.util.Log
 import com.spksh.todoline.data.Event.Event
 import com.spksh.todoline.data.TimeLinedActivity.TimeLinedActivity
-import com.spksh.todoline.ui.model.EventUiModel
 import java.time.Instant
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit

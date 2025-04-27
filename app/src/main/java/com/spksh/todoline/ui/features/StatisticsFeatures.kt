@@ -1,4 +1,4 @@
-package com.spksh.todoline.ui
+package com.spksh.todoline.ui.features
 
 import com.spksh.todoline.domain.Statistics.GetStatisticsUseCase
 import com.spksh.todoline.ui.model.Statistics

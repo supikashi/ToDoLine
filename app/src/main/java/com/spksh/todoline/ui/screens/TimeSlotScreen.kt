@@ -4,19 +4,20 @@ import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -172,15 +173,13 @@ fun TimeSlotScreen(
                             readOnly = true,
                             trailingIcon = { ExposedDropdownMenuDefaults. TrailingIcon(expanded = expandedTagMenu) },
                             colors = TextFieldDefaults.colors(
-                                unfocusedContainerColor = color,
-                                focusedContainerColor = color,
-                                unfocusedIndicatorColor = Color.Transparent,
-                                focusedIndicatorColor = Color.Transparent,
-                                disabledIndicatorColor = Color.Transparent,
-                                focusedTextColor = MaterialTheme.colorScheme.outline,
-                                unfocusedTextColor = MaterialTheme.colorScheme.outline
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedContainerColor = Color.Transparent,
+                                disabledContainerColor = Color.Transparent,
+                                focusedTextColor = color,
+                                unfocusedTextColor = color
                             ),
-                            shape = RoundedCornerShape(64.dp)
+
                         )
 
                         ExposedDropdownMenu(
@@ -188,17 +187,24 @@ fun TimeSlotScreen(
                             onDismissRequest = { expandedTagMenu = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Card(
-                                    colors = CardDefaults
-                                        .cardColors()
-                                        .copy(containerColor = Color(android.graphics.Color.parseColor("#F5F5DC")))
-                                ) {
-                                    Text(
-                                        text = "Any Task",
-                                        modifier = Modifier.padding(8.dp),
-                                        color = MaterialTheme.colorScheme.outline
-                                    )
-                                }},
+                                text = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(24.dp)
+                                                .background(
+                                                    color = Color(android.graphics.Color.parseColor("#F5F5DC")),
+                                                    shape = CircleShape
+                                                )
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.any_task),
+                                            modifier = Modifier.padding(8.dp)
+                                        )
+                                    }
+                                },
                                 onClick = {
                                     timeSlot?.let {
                                         viewModel.timeSlotFeatures.update(it.copy(tagId = 0))
@@ -208,17 +214,23 @@ fun TimeSlotScreen(
                             )
                             uiState.tags.forEach { tag ->
                                 DropdownMenuItem(
-                                    text = { Card(
-                                        colors = CardDefaults
-                                            .cardColors()
-                                            .copy(containerColor = Color(android.graphics.Color.parseColor(tag.color)))
-                                    ) {
-                                        Text(
-                                            text = tag.name,
-                                            modifier = Modifier.padding(8.dp),
-                                            color = MaterialTheme.colorScheme.outline
-                                        )
-                                    }
+                                    text = {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(24.dp)
+                                                    .background(
+                                                        color = Color(android.graphics.Color.parseColor(tag.color)),
+                                                        shape = CircleShape
+                                                    )
+                                            )
+                                            Text(
+                                                text = tag.name,
+                                                modifier = Modifier.padding(8.dp)
+                                            )
+                                        }
                                     },
                                     onClick = {
                                         timeSlot?.let {

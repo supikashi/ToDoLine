@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -61,6 +62,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -322,6 +324,7 @@ fun CalendarScreen(
                     text = stringResource(R.string.potentially_overdue_tasks),
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.Center,
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
                         .padding(16.dp)
@@ -339,28 +342,36 @@ fun CalendarScreen(
                     }
                     items(tasksWithBadDeadline.filter { it.importance > 5 }) {
                         Card(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
                             colors = CardDefaults.cardColors().copy(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
                         ) {
-                            Column(
+                            Row(
                                 modifier = Modifier
-                                    .clickable { }
-                                    .padding(8.dp)
-                                    .padding(horizontal = 8.dp)
                                     .fillMaxSize()
+                                    .clickable { }
                             ) {
-                                Text(
-                                    text = it.name,
-                                    //maxLines = 1
-                                    color = MaterialTheme.colorScheme.onSurface
-                                    //modifier = Modifier.
+                                Spacer(
+                                    Modifier.fillMaxHeight().width(10.dp).background(if (it.urgency > 5) extendedDark.quadrant1.colorContainer else extendedDark.quadrant2.colorContainer)
                                 )
-                                it.deadlineText?.let {
+                                Column(
+                                    modifier = Modifier
+                                        .padding(8.dp)
+                                        .padding(horizontal = 8.dp)
+                                        .fillMaxSize()
+                                ) {
                                     Text(
-                                        text = it,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        text = it.name,
+                                        //maxLines = 1
+                                        color = MaterialTheme.colorScheme.onSurface
+                                        //modifier = Modifier.
                                     )
+                                    it.deadlineText?.let {
+                                        Text(
+                                            text = it,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -372,28 +383,38 @@ fun CalendarScreen(
                     }
                     items(tasksWithBadDeadline.filter { it.importance < 6 }) {
                         Card(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
                             colors = CardDefaults.cardColors().copy(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
                         ) {
-                            Column(
+                            Row(
                                 modifier = Modifier
-                                    .clickable { }
-                                    .padding(8.dp)
-                                    .padding(horizontal = 8.dp)
                                     .fillMaxSize()
+                                    .clickable { }
                             ) {
-                                Text(
-                                    text = it.name,
-                                    //maxLines = 1
-                                    color = MaterialTheme.colorScheme.onSurface
-                                    //modifier = Modifier.
+                                Spacer(
+                                    Modifier.fillMaxHeight().width(10.dp)
+                                        .background(if (it.urgency > 5) extendedDark.quadrant3.colorContainer else extendedDark.quadrant4.colorContainer)
                                 )
-                                it.deadlineText?.let {
+                                Column(
+                                    modifier = Modifier
+                                        .clickable { }
+                                        .padding(8.dp)
+                                        .padding(horizontal = 8.dp)
+                                        .fillMaxSize()
+                                ) {
                                     Text(
-                                        text = it,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        text = it.name,
+                                        //maxLines = 1
+                                        color = MaterialTheme.colorScheme.onSurface
+                                        //modifier = Modifier.
                                     )
+                                    it.deadlineText?.let {
+                                        Text(
+                                            text = it,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -441,28 +462,51 @@ fun CalendarScreen(
                     },
                     item = { task, deadlineColor ->
                         Card(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
                             colors = CardDefaults.cardColors().copy(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
                         ) {
-                            Column(
+                            Row(
                                 modifier = Modifier
-                                    .clickable { }
-                                    .padding(8.dp)
-                                    .padding(horizontal = 8.dp)
                                     .fillMaxSize()
+                                    .clickable { }
                             ) {
-                                Text(
-                                    text = task.name,
-                                    //maxLines = 1
-                                    color = MaterialTheme.colorScheme.onSurface
-                                    //modifier = Modifier.
+                                Spacer(
+                                    Modifier.fillMaxHeight().width(10.dp)
+                                        .background(
+                                            if (task.importance > 5) {
+                                                if (task.urgency > 5) {
+                                                    extendedDark.quadrant1.colorContainer
+                                                } else {
+                                                    extendedDark.quadrant2.colorContainer
+                                                }
+                                            } else {
+                                                if (task.urgency > 5) {
+                                                    extendedDark.quadrant3.colorContainer
+                                                } else {
+                                                    extendedDark.quadrant4.colorContainer
+                                                }
+                                            }
+                                        )
                                 )
-                                task.deadlineText?.let {
+                                Column(
+                                    modifier = Modifier
+                                        .padding(8.dp)
+                                        .padding(horizontal = 8.dp)
+                                        .fillMaxSize()
+                                ) {
                                     Text(
-                                        text = it,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = deadlineColor
+                                        text = task.name,
+                                        //maxLines = 1
+                                        color = MaterialTheme.colorScheme.onSurface
+                                        //modifier = Modifier.
                                     )
+                                    task.deadlineText?.let {
+                                        Text(
+                                            text = it,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = deadlineColor
+                                        )
+                                    }
                                 }
                             }
                         }

@@ -1,9 +1,5 @@
 package com.spksh.todoline.ui.screens
 
-import android.app.Activity
-import android.content.Context
-import android.content.Intent
-import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -32,7 +28,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.spksh.todoline.R
-import com.spksh.todoline.ui.MainActivity
 import com.spksh.todoline.ui.MainViewModel
 
 @Composable

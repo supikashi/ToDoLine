@@ -10,11 +10,11 @@
     <string name="day">День</string>
     <string name="list">Список</string>
     <string name="add_task">Добавить задачу</string>
-    <string name="promote_important_tasks">Повысить важность задач</string>
+    <string name="promote_important_tasks">Продвинуть важные задачи</string>
     <string name="set_custom_order">Настроить порядок</string>
     <string name="potentially_overdue_tasks">Потенциально просроченные задачи</string>
-    <string name="important">Важно</string>
-    <string name="unimportant">Неважно</string>
+    <string name="important">Важные задачи</string>
+    <string name="unimportant">Неважные задачи</string>
     <string name="delete">Удалить</string>
     <string name="event">Событие</string>
     <string name="description">Описание</string>
@@ -75,7 +75,7 @@
     <string name="bad_end_time">Некорректное время окончания</string>
     <string name="save">Сохранить</string>
     <string name="subtask_of">Подзадача: %1$s</string>
-    <string name="part"> (Часть %1$s/%2$s)</string>
+    <string name="part">" (Часть %1$s/%2$s)"</string>
     <string name="create_dependent_tasks">Создать</string>
     <string name="create_new">Создать</string>
     <string name="choose_date">Выбрать дату</string>

@@ -8,14 +8,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,9 +42,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.spksh.todoline.ui.MainViewModel
 import com.spksh.todoline.R
 import com.spksh.todoline.data.Task.SubTask
+import com.spksh.todoline.ui.MainViewModel
 import com.spksh.todoline.ui.components.ChildTasksPicker
 import com.spksh.todoline.ui.components.DateTimePicker
 import com.spksh.todoline.ui.components.RequiredTimePicker
@@ -300,13 +297,13 @@ fun TaskScreen(
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedQuadrantMenu) },
                         textStyle = MaterialTheme.typography.bodyMedium,
                         colors = TextFieldDefaults.colors(
-                            //unfocusedContainerColor = color,
-                            //focusedContainerColor = color,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            focusedIndicatorColor = Color.Transparent,
-                            disabledIndicatorColor = Color.Transparent,
-                            focusedTextColor = MaterialTheme.colorScheme.outline,
-                            unfocusedTextColor = MaterialTheme.colorScheme.outline
+                            //unfocusedIndicatorColor = Color.Transparent,
+                            //focusedIndicatorColor = Color.Transparent,
+                            //disabledIndicatorColor = Color.Transparent,
+                            focusedTextColor = quadrantsColors[index],
+                            unfocusedTextColor = quadrantsColors[index],
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
                         ),
                     )
 
@@ -320,7 +317,7 @@ fun TaskScreen(
                                     Text(
                                         text = quadrantsNames[i],
                                         modifier = Modifier.padding(8.dp),
-                                        color = MaterialTheme.colorScheme.outline
+                                        color = quadrantsColors[i]
                                     )
                                 },
                                 onClick = {

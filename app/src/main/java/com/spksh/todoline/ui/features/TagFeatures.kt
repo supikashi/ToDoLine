@@ -1,4 +1,4 @@
-package com.spksh.todoline.ui
+package com.spksh.todoline.ui.features
 
 import com.spksh.todoline.data.Tag.Tag
 import com.spksh.todoline.domain.Tag.AddTagUseCase

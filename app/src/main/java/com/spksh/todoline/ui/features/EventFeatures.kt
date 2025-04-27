@@ -1,4 +1,4 @@
-package com.spksh.todoline.ui
+package com.spksh.todoline.ui.features
 
 import com.spksh.todoline.domain.Event.AddEventUseCase
 import com.spksh.todoline.domain.Event.DeleteEventUseCase

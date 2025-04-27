@@ -16,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -57,6 +58,12 @@ fun StatisticsScreen(
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 8.dp, start = 8.dp)
         ) {
+            IconButton(onClick = {viewModel.popBackStack()}) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.back_to_matrix_screen)
+                )
+            }
             Text(
                 text = stringResource(R.string.todoline_statistics),
                 modifier = Modifier.weight(1f),

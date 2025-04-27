@@ -19,9 +19,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -61,19 +58,24 @@ fun TagPicker(
         }
     } else {
         LazyRow(
-            modifier = Modifier.clickable { showDialog = true }
+            modifier = Modifier.clickable { showDialog = true },
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(tags.filter {it.id in selectedTagsIds} ) { tag ->
-                Card(
-                    modifier = Modifier.padding(4.dp),
-                    colors = CardDefaults
-                        .cardColors()
-                        .copy(containerColor = Color(android.graphics.Color.parseColor(tag.color)))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .background(
+                                color = Color(android.graphics.Color.parseColor(tag.color)),
+                                shape = CircleShape
+                            )
+                    )
                     Text(
                         modifier = Modifier.padding(8.dp),
-                        text = tag.name,
-                        color = MaterialTheme.colorScheme.outline
+                        text = tag.name
                     )
                 }
             }

@@ -1,4 +1,4 @@
-package com.spksh.todoline.ui
+package com.spksh.todoline.ui.model
 
 import com.spksh.todoline.data.SettingsData
 import com.spksh.todoline.domain.Event.GetEventsFlowUseCase
@@ -7,11 +7,6 @@ import com.spksh.todoline.domain.Tag.GetTagsFlowUseCase
 import com.spksh.todoline.domain.Task.GetTasksFlowUseCase
 import com.spksh.todoline.domain.TimeSlot.GetTimeSlotsFlowUseCase
 import com.spksh.todoline.domain.TimelinedActivity.GetActivitiesFlowUseCase
-import com.spksh.todoline.ui.model.ActivityUiModel
-import com.spksh.todoline.ui.model.EventUiModel
-import com.spksh.todoline.ui.model.TaskUiModel
-import com.spksh.todoline.ui.model.TimeSlotUiModel
-import com.spksh.todoline.ui.model.UiState
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject

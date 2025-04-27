@@ -1,4 +1,4 @@
-package com.spksh.todoline.ui
+package com.spksh.todoline.ui.features
 
 import com.spksh.todoline.domain.TimelinedActivity.UpdateTimelinedActivityUseCase
 import com.spksh.todoline.ui.model.ActivityUiModel

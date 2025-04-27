@@ -1,15 +1,15 @@
 package com.spksh.todoline.ui.components
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -43,19 +43,18 @@ fun TagItem(
             checked = selected,
             onCheckedChange = onCheckedChange
         )
-        Card(
-            //modifier = Modifier.weight(1f).padding(end = 16.dp),
-            modifier = Modifier.clickable { showDeleteButton = true },
-            colors = CardDefaults
-                .cardColors()
-                .copy(containerColor = Color(android.graphics.Color.parseColor(tag.color)))
-        ) {
-            Text(
-                text = tag.name,
-                modifier = Modifier.padding(8.dp),
-                color = MaterialTheme.colorScheme.outline
-            )
-        }
+        Box(
+            modifier = Modifier
+                .size(16.dp)
+                .background(
+                    color = Color(android.graphics.Color.parseColor(tag.color)),
+                    shape = CircleShape
+                )
+        )
+        Text(
+            text = tag.name,
+            modifier = Modifier.padding(8.dp)
+        )
         DropdownMenu(
             expanded = showDeleteButton,
             onDismissRequest = { showDeleteButton = false }

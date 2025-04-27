@@ -1,11 +1,9 @@
 package com.spksh.todoline.domain.Event
 
-import androidx.lifecycle.viewModelScope
 import com.spksh.todoline.data.Event.Event
 import com.spksh.todoline.data.Event.EventRepository
 import com.spksh.todoline.domain.TimelinedActivity.AddAllActivitiesUseCase
 import com.spksh.todoline.domain.TimelinedActivity.GetActivitiesByEventUseCase
-import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.ZoneId
 import javax.inject.Inject
